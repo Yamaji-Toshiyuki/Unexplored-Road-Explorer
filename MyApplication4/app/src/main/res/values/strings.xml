@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">URE</string>
+
+    <string name="osm_copyright"> © OpenStreetMap contributors </string>
+
+    <string name="action_image">image</string>
+    <string name="action_camera">camera</string>
+
+    <string name="tap_start">TAP TO START</string>
+    <string name="user_id">UserID :</string>
+</resources>

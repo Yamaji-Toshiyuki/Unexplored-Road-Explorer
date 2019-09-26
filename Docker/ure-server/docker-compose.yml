@@ -1,0 +1,37 @@
+version: '3'
+
+services:
+  flask:
+    restart: always
+    build: 
+      context: ./flask
+      dockerfile: Dockerfile
+    container_name: 'ure-server-flask'
+    working_dir: '/home'
+    tty: true
+    volumes:
+      - ./flask/data:/home
+    ports:
+      - "5001:5000"
+    networks:
+      - ure-net
+
+  postgres:
+    build:
+      context: ./postgres
+      dockerfile: Dockerfile
+    container_name: 'ure-server-postgres'
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: test_db
+    volumes:
+      - ./postgres/data:/home
+    ports:
+      - '5431:5432'
+    networks:
+      - ure-net
+
+networks:
+  ure-net:
+    driver: bridge
