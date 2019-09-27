@@ -72,13 +72,12 @@ def search_route(radius, now_location):
         cursor = connect.cursor()
     except:
         return "Error Occured at connect to server / " + connect
-    diff = []
-    diff.append(360*float(radius)/6356752.314)
-    point1x = float(now_location.split(",")[0]) - diff[0]
-    point2x = float(now_location.split(",")[0]) + diff[0]
-    diff.append(360*float(radius)/( math.cos(point1x) * 6356752.314))
-    point1y = float(now_location.split(",")[1]) - diff[1]
-    point2y = float(now_location.split(",")[1]) + diff[1]
+    y_diff = (360*float(radius)/(2*math.pi*6356752.314))
+    x_diff = (360*float(radius)/(math.cos(float(now_location.split(",")[0])*2*math.pi*6356752.314))
+    point1x = float(now_location.split(",")[0]) - x_diff
+    point2x = float(now_location.split(",")[0]) + x_diff
+    point1y = float(now_location.split(",")[1]) - y_diff
+    point2y = float(now_location.split(",")[1]) + y_diff
     sql = "SELECT name, ST_Astext(ST_Transform(way, 4326)) FROM planet_osm_line WHERE way && ST_Transform(ST_GeomFromText('LINESTRING(" + str(point1x) + " " + str(point1y) + " , " + str(point2x) + " " + str(point2y) + ")', 4326), 900913);"
     try:
         cursor.execute(sql)
@@ -91,7 +90,9 @@ def search_route(radius, now_location):
     result = []
     for i in range(len(temp)):
         result.append(dict(name=temp[i][0], way=temp[i][1]))
-    return jsonify(result)
+    return jsonify({
+        'result':result
+    })
 
 @app.route('/upload_photo/<user_id>/<user_name>', methods=['GET', 'POST'])
 def upload_photo(user_id, user_name):
