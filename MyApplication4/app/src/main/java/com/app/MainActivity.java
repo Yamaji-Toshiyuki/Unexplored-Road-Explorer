@@ -1,8 +1,6 @@
 package com.app;
 
-import android.Manifest;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
@@ -11,13 +9,10 @@ import android.widget.ImageButton;
 
 import com.google.android.material.tabs.TabLayout;
 
-import androidx.annotation.NonNull;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 import androidx.viewpager.widget.ViewPager;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.app.ui.SectionsPagerAdapter;
+import com.app.fragment.SectionsPagerAdapter;
 
 import java.io.File;
 import java.io.FileNotFoundException;

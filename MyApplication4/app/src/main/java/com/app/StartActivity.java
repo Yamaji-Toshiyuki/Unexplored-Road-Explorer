@@ -38,6 +38,7 @@ public class StartActivity extends AppCompatActivity {
 	private EditText editText;
 	private TextView textView;
 	private AlertDialog.Builder dialog;
+	private boolean isEntry = false;
 
 	@Override
 	protected void onCreate(Bundle saveInstanceState){
@@ -79,8 +80,7 @@ public class StartActivity extends AppCompatActivity {
 					}
 				});
 
-		dialog.show();
-		readUsername();
+		isEntry = readUsername();
 	}
 
 	/**
@@ -109,7 +109,7 @@ public class StartActivity extends AppCompatActivity {
 	 * ユーザーIDがあるか確認して表示する
 	 * ない場合は登録用ダイアログを表示する
 	 */
-	protected void readUsername(){
+	protected boolean readUsername(){
 		// ユーザー名を取得して表示する
 		try {
 			FileInputStream in = openFileInput("user_id");
@@ -120,13 +120,16 @@ public class StartActivity extends AppCompatActivity {
 			textView.setText(new String(buffer).trim());
 
 			in.close();
+			return true;
 		} catch (FileNotFoundException e) {
 			// ユーザー名のファイルがなかったらダイアログを表示する
 			dialog.show();
 			text2.setText(null);
+			return false;
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		return false;
 	}
 
 	/**
@@ -148,6 +151,7 @@ public class StartActivity extends AppCompatActivity {
 					public void onResponse(String response) {
 						// ユーザー名を保存する
 						writeUsername(username, response);
+						isEntry = true;
 					}
 				},
 				// 通信失敗
@@ -155,6 +159,7 @@ public class StartActivity extends AppCompatActivity {
 					@Override
 					public void onErrorResponse(VolleyError error) {
 						Log.e("err", "error response volley", error);
+						isEntry = false;
 					}
 				});
 
@@ -168,9 +173,15 @@ public class StartActivity extends AppCompatActivity {
 	public boolean onTouchEvent(MotionEvent event){
 		// 画面から指が離されたら画面を遷移
 		if(event.getAction() == MotionEvent.ACTION_UP) {
-			Intent intent = new Intent(this, MainActivity.class);
-			startActivity(intent);
-			release();
+			if(isEntry){
+				Intent intent = new Intent(this, MainActivity.class);
+				startActivity(intent);
+				release();
+			}
+			else {
+				// ユーザー登録が済んでいないならダイアログを表示
+				dialog.show();
+			}
 		}
 		return true;
 	}
