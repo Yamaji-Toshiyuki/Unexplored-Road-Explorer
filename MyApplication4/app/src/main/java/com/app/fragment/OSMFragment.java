@@ -219,7 +219,7 @@ public class OSMFragment extends Fragment {
 		}
 		String zoom = String.valueOf(mEdit.getText());
 		try {
-			if(zoom == null){
+			if(zoom.length() < 1){
 				zoom = "1";
 			}
 			else if(Integer.parseInt(zoom) > 1000){
@@ -240,6 +240,10 @@ public class OSMFragment extends Fragment {
 					public void onResponse(JSONObject response) {
 						// 道の線を引く
 						try {
+							if("Success".equals(response.getString("status"))){
+								Log.e("err", "error response server");
+							}
+							drawRange(response.getString("search_range"));
 							drawRoad(response.getJSONArray("result"));
 						} catch (JSONException e) {
 							e.printStackTrace();
@@ -256,7 +260,35 @@ public class OSMFragment extends Fragment {
 		getQueue.add(mRequest);
 	}
 
+	private void drawRange(String str){
+		mMapView.getOverlays().remove(rangeLine);
+
+		rangeLine = new Polyline(mMapView);
+		rangeLine.setColor(0xFF0099CC);
+
+		double[] lat = new double[2];
+		double[] lon = new double[2];
+		int i = 0;
+		String range = str.substring(1, str.length() - 1);
+		for(String point:range.split(Pattern.quote(","))){
+			int spacePos = point.indexOf(' ');
+			lat[i] = Double.parseDouble(point.substring(spacePos + 1));
+			lon[i] = Double.parseDouble(point.substring(0, spacePos));
+			i++;
+		}
+
+		rangeLine.addPoint(new GeoPoint(lat[0], lon[0]));
+		rangeLine.addPoint(new GeoPoint(lat[0], lon[1]));
+		rangeLine.addPoint(new GeoPoint(lat[1], lon[1]));
+		rangeLine.addPoint(new GeoPoint(lat[1], lon[0]));
+		rangeLine.addPoint(new GeoPoint(lat[0], lon[0]));
+
+		mMapView.getOverlays().add(rangeLine);
+		mMapView.invalidate();
+	}
+
 	private List<Polyline> polylines = new ArrayList<>();
+	private Polyline rangeLine;
 
 	private void drawRoad(JSONArray response){
 		for(Polyline poly:polylines){
@@ -274,16 +306,15 @@ public class OSMFragment extends Fragment {
 				String str = object.getString("way");
 				String[] way = str.substring(11, str.length() - 1).split(Pattern.quote(","), 0);
 				for(String point:way) {
-					int spacerPos1 = point.indexOf(' ');
+					int spacerPos = point.indexOf(' ');
 
-					GeoPoint gPt = new GeoPoint(Double.parseDouble(point.substring(spacerPos1 + 1)),
-							Double.parseDouble(point.substring(0, spacerPos1)));
+					GeoPoint gPt = new GeoPoint(Double.parseDouble(point.substring(spacerPos + 1)),
+							Double.parseDouble(point.substring(0, spacerPos)));
 					// ポイントごとにジオポイントを作成する
 					polylines.get(i).addPoint(gPt);
 				}
 
 				mMapView.getOverlays().add(polylines.get(i));
-				Log.d("success", "draw road " + object.getString("name"));
 			} catch (JSONException e) {
 				e.printStackTrace();
 			}
