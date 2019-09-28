@@ -106,7 +106,7 @@ def search_route(radius, now_location):
         result.append(dict(name=temp[i][0], way=temp[i][1]))
     return jsonify({
         'status':"success",
-        'search_renge':"(" + str(point1x) + " " + str(point1y) + "," + str(point2x) + " " + str(point2y) + ")",
+        'search_range':"(" + str(point1x) + " " + str(point1y) + "," + str(point2x) + " " + str(point2y) + ")",
         'result':result
     })
 
