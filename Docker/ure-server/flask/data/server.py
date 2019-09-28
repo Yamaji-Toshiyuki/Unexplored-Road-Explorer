@@ -58,6 +58,8 @@ def register(name):
         result = cursor.fetchall()
         sql = "INSERT INTO user_list VALUES( "+ str(result[0][0]) +", '" + str(name) + "')"
         cursor.execute(sql)
+        sql = "CREATE TABLE " + name + "_explored ( way geometry(LineString, 3857), date date)"
+        cursor.execute(sql)
         connect.commit()
     except:
         return "Error Occurred at execute sql / " + sql
@@ -73,7 +75,7 @@ def search_route(radius, now_location):
     except:
         return "Error Occured at connect to server / " + connect
     y_diff = (360*float(radius)/(2*math.pi*6356752.314))
-    x_diff = (360*float(radius)/(math.cos(float(now_location.split(",")[0])*2*math.pi*6356752.314))
+    x_diff = (360*float(radius)/(math.cos(float(now_location.split(",")[0])*2*math.pi*6356752.314)))
     point1x = float(now_location.split(",")[0]) - x_diff
     point2x = float(now_location.split(",")[0]) + x_diff
     point1y = float(now_location.split(",")[1]) - y_diff
