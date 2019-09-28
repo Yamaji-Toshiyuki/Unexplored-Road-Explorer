@@ -51,16 +51,24 @@ def register(name):
         connect = getConnect("ure", "ure_data", "procon30")
         cursor = connect.cursor()
     except:
-        return "Error Occured at connect to server / " + connect
+        return jsonify({
+            'status':"Failure",
+            'message':"Error Occured at connect to server / " + connect
+        })
     try:
         sql = "SELECT COUNT(*) FROM user_list"
         cursor.execute(sql)
         result = cursor.fetchall()
         sql = "INSERT INTO user_list VALUES( "+ str(result[0][0]) +", '" + str(name) + "')"
         cursor.execute(sql)
+        sql = "CREATE TABLE " + name + "_explored ( way geometry(LineString, 3857), date date)"
+        cursor.execute(sql)
         connect.commit()
     except:
-        return "Error Occurred at execute sql / " + sql
+        return jsonify({
+            'status':"failure",
+            'message':"Error Occurred at execute sql / " + sql
+        })
     cursor.close()
     connect.close()
     return str(result[0][0])
@@ -71,9 +79,12 @@ def search_route(radius, now_location):
         connect = getConnect("ure", "osm_data", "procon30")
         cursor = connect.cursor()
     except:
-        return "Error Occured at connect to server / " + connect
+        return jsonify({
+            'status':"Failure",
+            'message':"Error Occured at connect to server / " + connect
+        })
     y_diff = (360*float(radius)/(2*math.pi*6356752.314))
-    x_diff = (360*float(radius)/(math.cos(float(now_location.split(",")[0])*2*math.pi*6356752.314))
+    x_diff = (360*float(radius)/(math.cos(float(now_location.split(",")[0]))*2*math.pi*6356752.314))
     point1x = float(now_location.split(",")[0]) - x_diff
     point2x = float(now_location.split(",")[0]) + x_diff
     point1y = float(now_location.split(",")[1]) - y_diff
@@ -83,7 +94,10 @@ def search_route(radius, now_location):
         cursor.execute(sql)
         result = cursor.fetchall()
     except:
-        return "Error Occurred at execute sql / " + sql
+        return jsonify({
+            'status':"failure",
+            'message':"Error Occurred at execute sql / " + sql
+        })
     cursor.close()
     connect.close()
     temp = result
@@ -91,6 +105,8 @@ def search_route(radius, now_location):
     for i in range(len(temp)):
         result.append(dict(name=temp[i][0], way=temp[i][1]))
     return jsonify({
+        'status':"success",
+        'search_renge':"(" + str(point1x) + " " + str(point1y) + "," + str(point2x) + " " + str(point2y) + ")",
         'result':result
     })
 
@@ -100,7 +116,10 @@ def upload_photo(user_id, user_name):
         connect = getConnect("ure", "ure_data", "procon30")
         cursor = connect.cursor()
     except:
-        return "Error Occured at connect to server / " + connect
+        return jsonify({
+            'status':"Failure",
+            'message':"Error Occured at connect to server / " + connect
+        })
     sql = "SELECT user_name FROM user_list WHERE user_id=" + str(user_id)
     try:
         cursor.execute(sql)
@@ -127,12 +146,18 @@ def do_sql(db, sql):
         connect = getConnect("postgres", db, "postgres")
         cursor = connect.cursor()
     except:
-        return "Error Occured at connect to server / " + connect
+        return jsonify({
+            'status':"Failure",
+            'message':"Error Occured at connect to server / " + connect
+        })
     try:
         cursor.execute(sql)
         result = cursor.fetchall()
     except:
-        return "Error Occurred at execute sql / " + sql
+        return jsonify({
+            'status':"failure",
+            'message':"Error Occurred at execute sql / " + sql
+        })
     cursor.close()
     connect.close()
     return str(result)
