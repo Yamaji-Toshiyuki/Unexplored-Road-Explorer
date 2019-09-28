@@ -6,7 +6,7 @@ import android.widget.ImageButton;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.app.ui.Camera2Fragment;
+import com.app.fragment.Camera2Fragment;
 
 public class Camera2Activity extends AppCompatActivity {
 
