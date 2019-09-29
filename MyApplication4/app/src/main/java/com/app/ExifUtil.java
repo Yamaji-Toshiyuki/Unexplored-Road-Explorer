@@ -38,7 +38,7 @@ public class ExifUtil {
 
 		ExifInterface exif = null;
 		try {
-			exif = new ExifInterface(file.toString());
+			exif = new ExifInterface(file.getPath());
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

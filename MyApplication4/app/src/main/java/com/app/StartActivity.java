@@ -7,6 +7,7 @@ import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.MotionEvent;
+import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -31,13 +32,16 @@ import java.io.IOException;
 
 public class StartActivity extends AppCompatActivity {
 
-	private TextView text;
+	private final int REQUEST_CODE = 2000;
+
+	private TextView text1;
 	private TextView text2;
+	private TextView text3;
 	private ImageView logo;
 
 	private EditText editText;
-	private TextView textView;
-	private AlertDialog.Builder dialog;
+	private TextView userName;
+	private AlertDialog dialog;
 	private boolean isEntry = false;
 
 	@Override
@@ -46,24 +50,24 @@ public class StartActivity extends AppCompatActivity {
 
 		// 権限がない場合、許可ダイアログを表示
 		// 位置情報
-		if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED){
-			String[] permission = {Manifest.permission.ACCESS_FINE_LOCATION};
-			ActivityCompat.requestPermissions(this, permission, 2000);
-		}
+		boolean locationPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED;
 		// カメラ
-		if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-			String[] permission = {Manifest.permission.CAMERA};
-			ActivityCompat.requestPermissions(this, permission, 2001);
-		}
+		boolean cameraPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED;
 		// 外部ストレージ
-		if(ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED){
-			String[] permission = {Manifest.permission.WRITE_EXTERNAL_STORAGE};
-			ActivityCompat.requestPermissions(this, permission, 2002);
+		boolean storagePermission = ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED;
+		if(locationPermission || cameraPermission || storagePermission){
+			String[] permission = {
+					Manifest.permission.ACCESS_FINE_LOCATION,
+					Manifest.permission.CAMERA,
+					Manifest.permission.WRITE_EXTERNAL_STORAGE
+			};
+			ActivityCompat.requestPermissions(this, permission, REQUEST_CODE);
 		}
 
 		setContentView(R.layout.activity_start);
-		text = findViewById(R.id.start_text);
+		text1 = findViewById(R.id.text1);
 		text2 = findViewById(R.id.text2);
+		text3 = findViewById(R.id.text3);
 		logo = findViewById(R.id.logo);
 
 		editText = new EditText(this);
@@ -77,8 +81,13 @@ public class StartActivity extends AppCompatActivity {
 					public void onClick(DialogInterface dialog, int which) {
 						// サーバーにユーザー名を送る
 						pushVolley(String.valueOf(editText.getText()));
+
+						ViewGroup viewGroup = (ViewGroup) editText.getParent();
+						viewGroup.removeView(editText);
 					}
-				});
+				})
+				.create();
+		dialog.setCanceledOnTouchOutside(false);
 
 		isEntry = readUsername();
 	}
@@ -113,18 +122,18 @@ public class StartActivity extends AppCompatActivity {
 		// ユーザー名を取得して表示する
 		try {
 			FileInputStream in = openFileInput("user_id");
-			textView = findViewById(R.id.user);
+			userName = findViewById(R.id.user_name);
 
 			byte[] buffer = new byte[128];
 			in.read(buffer);
-			textView.setText(new String(buffer).trim());
+			userName.setText(new String(buffer).trim());
 
 			in.close();
 			return true;
 		} catch (FileNotFoundException e) {
 			// ユーザー名のファイルがなかったらダイアログを表示する
-			dialog.show();
-			text2.setText(null);
+			isEntry = false;
+			text3.setText(null);
 			return false;
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -193,14 +202,23 @@ public class StartActivity extends AppCompatActivity {
 		if(logo != null){
 			logo.setImageDrawable(null);
 		}
-		if(text != null){
-			text.setText(null);
+		if(text1 != null){
+			text1.setBackground(null);
 		}
 		if(text2 != null){
 			text2.setText(null);
 		}
-		if(textView != null){
-			textView.setText(null);
+		if(text3 != null){
+			text3.setText(null);
+		}
+		if(userName != null){
+			userName.setText(null);
+		}
+		if(dialog != null){
+			dialog = null;
+		}
+		if(editText != null){
+			editText = null;
 		}
 	}
 
@@ -209,17 +227,11 @@ public class StartActivity extends AppCompatActivity {
 	 */
 	@Override
 	public void onRequestPermissionsResult(int requestCode, @NonNull String[] permission, @NonNull int[] grantResults){
-		if(grantResults[0] != PackageManager.PERMISSION_GRANTED){
-			switch (requestCode){
-				case 2000:
-					Log.d("err", "no location permission");
+		if(requestCode == REQUEST_CODE) {
+			for(int i = 0; i < permission.length; i++) {
+				if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {
 					finish();
-				case 2001:
-					Log.d("err", "no camera permission");
-					finish();
-				case 2002:
-					Log.d("err", "no storage permission");
-					finish();
+				}
 			}
 		}
 	}
