@@ -45,6 +45,10 @@ def getConnect(username, dbname, password):
 def index():
     return "Server Ready"
 
+@app.route('/favicon.ico')
+def favicon():
+    return app.send_static_file("images/fav.ico")
+
 @app.route('/register/<name>')
 def register(name):
     try:
