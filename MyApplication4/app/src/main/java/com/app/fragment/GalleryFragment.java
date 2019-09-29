@@ -3,35 +3,34 @@ package com.app.fragment;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.GridLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.LinearLayout.LayoutParams;
 import android.widget.TextView;
 
 import androidx.fragment.app.Fragment;
 
 import com.app.R;
+import com.app.ui.CustomImageLayout;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 
 public class GalleryFragment extends Fragment {
 
 	private LinearLayout viewContainer;
-	private ImageView button;
-	private View view;
+
+	private List<String> list = new ArrayList<>();
 
 	static GalleryFragment newInstance(){
 		GalleryFragment fragment = new GalleryFragment();
@@ -45,39 +44,29 @@ public class GalleryFragment extends Fragment {
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle saveInstanceState){
 		View v = inflater.inflate(R.layout.fragment_gallery, null);
 		viewContainer = v.findViewById(R.id.container);
-		button = v.findViewById(R.id.image_button);
-		view = inflater.inflate(R.layout.fragment_image, null);
 		return v;
 	}
 
 	@Override
 	public void onActivityCreated(Bundle saveInstanceState) {
 		super.onActivityCreated(saveInstanceState);
-		//addGalleryContents(viewContainer, getContext());
-		button.setOnClickListener(new View.OnClickListener() {
+		addGalleryContents(viewContainer, Objects.requireNonNull(getContext()));
+		/*button.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View v) {
 				viewContainer.removeAllViews();
 				viewContainer.addView(view);
 			}
-		});
+		});*/
 	}
 
-	private static final String FILENAME_DATE_FORMAT = "MM:dd";
-
-	private List<String> list = new ArrayList<>();
+	@Override
+	public void onPause(){
+		list.clear();
+		super.onPause();
+	}
 
 	private void addGalleryContents(LinearLayout container, Context context){
-		Date date = new Date();
-		SimpleDateFormat sdf = new SimpleDateFormat(FILENAME_DATE_FORMAT, Locale.US);
-		String dateTime = sdf.format(date);
-
-		TextView date_text = new TextView(context);
-		date_text.setText(dateTime);
-		date_text.setTextColor(0xFF000000);
-		date_text.setTextSize(20f);
-
-		GridLayout gridLayout = new GridLayout(context);
 
 		String path = Objects.requireNonNull(context.getExternalFilesDir(null)).getPath();
 		File[] files = new File(path).listFiles();
@@ -87,36 +76,42 @@ public class GalleryFragment extends Fragment {
 			}
 		}
 
-		int i = 0;
-		int j = 0;
-		for(String filename:list) {
-			if (i > 3) {
-				i = 0;
-				j++;
-			}
-			// GridLayout用のパラメータ
-			GridLayout.LayoutParams params = new GridLayout.LayoutParams();
-			params.columnSpec = GridLayout.spec(i, GridLayout.FILL, 1);
-			params.rowSpec = GridLayout.spec(j, GridLayout.FILL, 1);
+		TextView date_text = new TextView(context);
+		date_text.setTextColor(0xFF000000);
+		date_text.setTextSize(60f);
+		date_text.setBackgroundResource(R.drawable.shadow);
 
-			// itemにパラメータをつける
-			ImageView image = new ImageView(context);
-			image.setLayoutParams(params);
+		CustomImageLayout layout = new CustomImageLayout(context);
+
+		int i = 0;
+		String tmp = "00/00";
+		for(String filename:list) {
+			if (i > 2) {
+				container.addView(layout);
+				layout = new CustomImageLayout(context);
+				i = 0;
+			}
+			String date = filename.substring(11, 16);
+			if (!tmp.equals(date)) {
+				String str = date.substring(0, 2) + "/" + date.substring(3, 5);
+				date_text.setText(str);
+				container.addView(date_text, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
+				tmp = date;
+			}
 
 			File file = new File(path + "/" + filename);
-			try {
-				InputStream input = new FileInputStream(file);
-				Bitmap bmp = BitmapFactory.decodeStream(input);
-				image.setImageBitmap(bmp);
-			} catch (FileNotFoundException e) {
-				e.printStackTrace();
-			}
-
-			gridLayout.addView(image);
+			Uri uri = Uri.fromFile(file);
+			layout.setImageUri(i, uri);
+			layout.setOnClickListener(i, new View.OnClickListener() {
+				@Override
+				public void onClick(View v) {
+					// TODO 画像の詳細
+				}
+			});
 
 			i++;
 		}
 
-		container.addView(gridLayout);
+		container.addView(layout);
 	}
 }
