@@ -178,6 +178,9 @@ def logging(user_id, user_name, now_location):
     auth_result = user_auth(cursor, user_id, user_name)
     if auth_result == "Successful":
         sql = "INSERT INTO " + str(user_id) + "_log VALUES(" + str(now_location.split(",")[0]) + " " + str(now_location.split(",")[1]) + ")"
+        cursor.execute(sql)
+        connect.commit()
+        return "Successful"
     else:
         return auth_result
 
