@@ -10,6 +10,7 @@
         android:src="@drawable/start"/>
 
     <TextView
+        android:id="@+id/text1"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="#8fff"/>
@@ -23,7 +24,7 @@
         android:src="@drawable/logo3"/>
 
     <TextView
-        android:id="@+id/start_text"
+        android:id="@+id/text2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
@@ -36,7 +37,7 @@
         android:textSize="40sp"/>
 
     <TextView
-        android:id="@+id/user"
+        android:id="@+id/user_name"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentEnd="true"
@@ -45,10 +46,10 @@
         android:textSize="30sp"/>
 
     <TextView
-        android:id="@+id/text2"
+        android:id="@+id/text3"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_toStartOf="@+id/user"
+        android:layout_toStartOf="@+id/user_name"
         android:layout_alignParentBottom="true"
         android:text="@string/user_id"
         android:textColor="#000"
