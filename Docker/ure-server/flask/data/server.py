@@ -105,15 +105,12 @@ def search_route(radius, now_location):
             'message':"Error Occured at connect to server / " + connect
         })
     y_diff = (360*float(radius)/(2*math.pi*6356752.314))
-#    x_diff = (360*float(radius)/(math.cos(float(now_location.split(",")[0]))*2*math.pi*6356752.314))
     x_diff = y_diff / math.cos(math.pi * float(now_location.split(",")[1]) / 180)
     point1x = float(now_location.split(",")[0]) - x_diff
     point2x = float(now_location.split(",")[0]) + x_diff
     point1y = float(now_location.split(",")[1]) - y_diff
     point2y = float(now_location.split(",")[1]) + y_diff
     sql = "SELECT name, ST_Astext(ST_Transform(way, 4326)) FROM planet_osm_line WHERE way && ST_Transform(ST_GeomFromText('LINESTRING(" + str(point1x) + " " + str(point1y) + " , " + str(point2x) + " " + str(point2y) + ")', 4326), 900913) AND route != 'ferry' ;"
-#    sql = "SELECT name, ST_AsText(ST_Transform(way, 4326)) FROM planet_osm_line WHERE ST_Contains(way, ST_GeomFromText('POLYGON(" + str(point1x) + " " + str(point1y) + " , " + str(point2x) + " " + str(point2y) + ")'))"
-#    sql = "SELECT * FROM planet_osm_line WHERE way && ST_Transform(ST_GeomFromText('LINESTRING(" + str(point1x) + " " + str(point1y) + " , " + str(point2x) + " " + str(point2y) + ")', 4326), 900913) LIMIT 1;"
     try:
         cursor.execute(sql)
         result = cursor.fetchall()
