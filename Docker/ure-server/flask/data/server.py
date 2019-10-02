@@ -82,7 +82,7 @@ def register(name):
         result = cursor.fetchall()
         sql = "INSERT INTO user_list VALUES( "+ str(result[0][0]) +", '" + str(name) + "')"
         cursor.execute(sql)
-        sql = "CREATE TABLE " + str(result[0][0]) + "_explored (osm_id bigint, ure_id int, way geometry(LineString, 3857), First_time date, latest_date date)"
+        sql = "CREATE TABLE id_" + str(result[0][0]) + "_explored (osm_id bigint, ure_id int, way geometry(LineString, 3857), First_time date, latest_date date)"
         cursor.execute(sql)
         connect.commit()
     except:
@@ -105,12 +105,15 @@ def search_route(radius, now_location):
             'message':"Error Occured at connect to server / " + connect
         })
     y_diff = (360*float(radius)/(2*math.pi*6356752.314))
-    x_diff = (360*float(radius)/(math.cos(float(now_location.split(",")[0]))*2*math.pi*6356752.314))
+#    x_diff = (360*float(radius)/(math.cos(float(now_location.split(",")[0]))*2*math.pi*6356752.314))
+    x_diff = y_diff / math.cos(math.pi * float(now_location.split(",")[1]) / 180)
     point1x = float(now_location.split(",")[0]) - x_diff
     point2x = float(now_location.split(",")[0]) + x_diff
     point1y = float(now_location.split(",")[1]) - y_diff
     point2y = float(now_location.split(",")[1]) + y_diff
-    sql = "SELECT name, ST_Astext(ST_Transform(way, 4326)) FROM planet_osm_line WHERE way && ST_Transform(ST_GeomFromText('LINESTRING(" + str(point1x) + " " + str(point1y) + " , " + str(point2x) + " " + str(point2y) + ")', 4326), 900913);"
+    sql = "SELECT name, ST_Astext(ST_Transform(way, 4326)) FROM planet_osm_line WHERE way && ST_Transform(ST_GeomFromText('LINESTRING(" + str(point1x) + " " + str(point1y) + " , " + str(point2x) + " " + str(point2y) + ")', 4326), 900913) AND route != 'ferry' ;"
+#    sql = "SELECT name, ST_AsText(ST_Transform(way, 4326)) FROM planet_osm_line WHERE ST_Contains(way, ST_GeomFromText('POLYGON(" + str(point1x) + " " + str(point1y) + " , " + str(point2x) + " " + str(point2y) + ")'))"
+#    sql = "SELECT * FROM planet_osm_line WHERE way && ST_Transform(ST_GeomFromText('LINESTRING(" + str(point1x) + " " + str(point1y) + " , " + str(point2x) + " " + str(point2y) + ")', 4326), 900913) LIMIT 1;"
     try:
         cursor.execute(sql)
         result = cursor.fetchall()
@@ -130,6 +133,7 @@ def search_route(radius, now_location):
         'search_range':"(" + str(point1x) + " " + str(point1y) + "," + str(point2x) + " " + str(point2y) + ")",
         'result':result
     })
+    # return str(result)
 
 @app.route('/logging_switch/<user_id>/<user_name>/<state>')
 def logging_switch(user_id, user_name, state):
@@ -144,20 +148,26 @@ def logging_switch(user_id, user_name, state):
     auth_result = user_auth(cursor, user_id, user_name)
     if auth_result == "Successful":
         if state == "ON":
-            sql = "CREATE TABLE " + str(user_id) + "_log ( way geometry(LineString, 3857))"
-            cursor.execute(sql)
+            try:
+                sql = "CREATE TABLE id_" + str(user_id) + "_log ( way geometry(Point, 3857))"
+                cursor.execute(sql)
+            except:
+                return jsonify({
+                    'status':"failure",
+                    'message':"Error Occurred at execute sql / " + sql
+                })
             connect.commit()
             return "logging ready."
         elif state == "OFF":
-            sql = "SELECT * FROM " + str(user_id) + "_log"
+            sql = "SELECT ST_Astext(ST_Transform(way, 3857)) FROM id_" + str(user_id) + "_log"
             result = cursor.execute(sql)
-            sql = "DROP TABLE " + str(user_id) + "_log"
+            sql = "DROP TABLE id_" + str(user_id) + "_log"
             cursor.execute(sql)
             log = "LINESTRING("
             for i in range(len(result)):
-                log += (str(result[i]) + ",")
+                log += (str(result[0][i]) + ",")
             log += ")"
-            sql = "INSERT INTO " + str(user_id) + "_explored VALUES( None, None, '" + str(log) + "', " + str(datetime.date.today()) + ", None)"
+            sql = "INSERT INTO id_" + str(user_id) + "_explored VALUES( None, None, '" + str(log) + "', " + str(datetime.date.today()) + ", None)"
             connect.commit()
             return "logging finished."
         else:
@@ -177,7 +187,7 @@ def logging(user_id, user_name, now_location):
         })
     auth_result = user_auth(cursor, user_id, user_name)
     if auth_result == "Successful":
-        sql = "INSERT INTO " + str(user_id) + "_log VALUES(" + str(now_location.split(",")[0]) + " " + str(now_location.split(",")[1]) + ")"
+        sql = "INSERT INTO id_" + str(user_id) + "_log VALUES(ST_GeomFromText('POINT(" + str(now_location.split(",")[0]) + " " + str(now_location.split(",")[1]) + ")', 3857))"
         cursor.execute(sql)
         connect.commit()
         return "Successful"
