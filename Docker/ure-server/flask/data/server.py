@@ -110,7 +110,8 @@ def search_route(radius, now_location):
     point2x = float(now_location.split(",")[0]) + x_diff
     point1y = float(now_location.split(",")[1]) - y_diff
     point2y = float(now_location.split(",")[1]) + y_diff
-    sql = "SELECT name, ST_Astext(ST_Transform(way, 4326)) FROM planet_osm_line WHERE way && ST_Transform(ST_GeomFromText('LINESTRING(" + str(point1x) + " " + str(point1y) + " , " + str(point2x) + " " + str(point2y) + ")', 4326), 900913) AND route != 'ferry' ;"
+    #sql = "SELECT name, ST_Astext(ST_Transform(way, 4326)) FROM planet_osm_line WHERE way && ST_Transform(ST_GeomFromText('LINESTRING(" + str(point1x) + " " + str(point1y) + " , " + str(point2x) + " " + str(point2y) + ")', 4326), 900913) AND route != 'ferry' AND " + str(radius) + " > ST_Distance(ST_GeomFromText('POINT(" + str(now_location[0]) + " " + str(now_location[1]) + ")', 4326), ST_Transform(way, 4326))"
+    sql = "SELECT name, ST_Astext(ST_Transform(way, 4326)) FROM planet_osm_line WHERE way && ST_Transform(ST_GeomFromText('LINESTRING(" + str(point1x) + " " + str(point1y) + " , " + str(point2x) + " " + str(point2y) + ")', 4326), 3857) AND route != 'ferry' AND route != 'rail'"
     try:
         cursor.execute(sql)
         result = cursor.fetchall()
@@ -149,23 +150,31 @@ def logging_switch(user_id, user_name, state):
                 sql = "CREATE TABLE id_" + str(user_id) + "_log ( way geometry(Point, 3857))"
                 cursor.execute(sql)
             except:
+                cursor.close()
+                connect.close()
                 return jsonify({
                     'status':"failure",
                     'message':"Error Occurred at execute sql / " + sql
                 })
             connect.commit()
+            cursor.close()
+            connect.close()
             return "logging ready."
         elif state == "OFF":
             sql = "SELECT ST_Astext(ST_Transform(way, 3857)) FROM id_" + str(user_id) + "_log"
-            result = cursor.execute(sql)
-            sql = "DROP TABLE id_" + str(user_id) + "_log"
             cursor.execute(sql)
+            result = cursor.fetchall()
             log = "LINESTRING("
             for i in range(len(result)):
-                log += (str(result[0][i]) + ",")
-            log += ")"
-            sql = "INSERT INTO id_" + str(user_id) + "_explored VALUES( None, None, '" + str(log) + "', " + str(datetime.date.today()) + ", None)"
+                log += (str(result[i]).lstrip("('POINT()')").rstrip(")',)") + ",")
+            log = log.rstrip(",") + ")"
+            sql = "INSERT INTO id_" + str(user_id) + "_explored VALUES( null, null, ST_Transform(ST_GeomFromText('" + str(log) + "', 4326), 3857),   null, to_date('" + str(datetime.date.today()) + "', 'YYYY-MM-DD'))"
+            cursor.execute(sql)
+            sql = "DROP TABLE id_" + str(user_id) + "_log"
+            cursor.execute(sql)
             connect.commit()
+            cursor.close()
+            connect.close()
             return "logging finished."
         else:
             return "Error Occurred / state is invalid."
@@ -187,6 +196,8 @@ def logging(user_id, user_name, now_location):
         sql = "INSERT INTO id_" + str(user_id) + "_log VALUES(ST_GeomFromText('POINT(" + str(now_location.split(",")[0]) + " " + str(now_location.split(",")[1]) + ")', 3857))"
         cursor.execute(sql)
         connect.commit()
+        cursor.close()
+        connect.close()
         return "Successful"
     else:
         return auth_result
