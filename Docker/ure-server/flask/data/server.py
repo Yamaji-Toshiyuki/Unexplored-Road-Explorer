@@ -79,6 +79,30 @@ def make_square(points):
     result += str(points[0]) + ")'"
     return result
 
+def map_matching(linestring):
+    try:
+        connect = getConnect("ure", "osm_data", "procon30")
+        cursor = connect.cursor()
+    except:
+        return jsonify({
+            'status':"Failure",
+            'message':"Error Occured at connect to server / " + connect
+        })
+    linestring = linestring.lstrip("LINESTRING(").rstrip(")")
+    linestring = linestring.split(",")
+    for i in range(len(linestring))
+        search_area = culc_metre(25, linestring[i].replace(" ", ","))
+        sql = "SELECT osm_id FROM planet_osm_line WHERE ST_Intersects(way, ST_Transform(ST_MakePolygon(ST_GeomFromText(" + make_square(search_area) + ", 4326)), 3857)) AND route != 'ferry' AND route != 'rail'"
+        cursor.execute(sql)
+        id_temp = cursor.fetchall()
+        for j in range(len(id_list)):
+            sql = "SELECT ST_Distance(SELECT way FROM planet_osm_line WHERE osm_id == " + str(id_temp[j]) + ", ST_GeomFromText('POINT(" + linestring[i] + ")'));"
+            cursor.execute(sql)
+            temp = cursor.fetchall()
+            if temp < dist or j = 0:
+                dist = temp
+                id_list.append()
+
 @app.route('/')
 def index():
     return "Server Ready"
@@ -126,7 +150,6 @@ def search_route(radius, now_location):
             'message':"Error Occured at connect to server / " + connect
         })
     search_area = culc_metre(radius, now_location)
-    #sql = "SELECT name, ST_Astext(ST_Transform(way, 4326)) FROM planet_osm_line WHERE way && ST_Transform(ST_MakePolygon(ST_GeomFromText(" + make_square(search_area) + ", 4326)), 900913) AND route != 'ferry' AND route != 'rail'"
     sql = "SELECT name, ST_Astext(ST_Transform(way, 4326)) FROM planet_osm_line WHERE ST_Intersects(way, ST_Transform(ST_MakePolygon(ST_GeomFromText(" + make_square(search_area) + ", 4326)), 3857)) AND route != 'ferry' AND route != 'rail'"
     try:
         cursor.execute(sql)
@@ -211,9 +234,15 @@ def logging_switch(user_id, user_name, state):
             connect.close()
             return "logging finished."
         else:
-            return "Error Occurred / state is invalid."
+            return jsonify({
+                'status':"failure",
+                'message':"Error Occurred / state is invalid."
+            })
     else:
-        return auth_result
+        return jsonify({
+            'status':"failure",
+            'message':auth_result
+        })
 
 @app.route('/logging/<user_id>/<user_name>/<now_location>')
 def logging(user_id, user_name, now_location):
@@ -234,7 +263,10 @@ def logging(user_id, user_name, now_location):
         connect.close()
         return "Successful"
     else:
-        return auth_result
+        return jsonify({
+            'status':"failure",
+            'message':auth_result
+        })
 
 @app.route('/upload_photo/<user_id>/<user_name>', methods=['GET', 'POST'])
 def upload_photo(user_id, user_name):
