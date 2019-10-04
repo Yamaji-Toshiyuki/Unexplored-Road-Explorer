@@ -125,19 +125,19 @@ def search_route(radius, now_location):
             'status':"Failure",
             'message':"Error Occured at connect to server / " + connect
         })
-    #sql = "SELECT name, ST_Astext(ST_Transform(way, 4326)) FROM planet_osm_line WHERE way && ST_Transform(ST_GeomFromText('LINESTRING(" + str(point1x) + " " + str(point1y) + " , " + str(point2x) + " " + str(point2y) + ")', 4326), 900913) AND route != 'ferry' AND " + str(radius) + " > ST_Distance(ST_GeomFromText('POINT(" + str(now_location[0]) + " " + str(now_location[1]) + ")', 4326), ST_Transform(way, 4326))"
-    #sql = "SELECT name, ST_Astext(ST_Transform(way, 4326)) FROM planet_osm_line WHERE way && ST_Transform(ST_GeomFromText('LINESTRING(" + str(point1x) + " " + str(point1y) + " , " + str(point2x) + " " + str(point2y) + ")', 4326), 3857) AND NOT ST_Disjoint(way, ) AND route != 'ferry' AND route != 'rail'"
     search_area = culc_metre(radius, now_location)
-    sql = "SELECT name, ST_Astext(ST_Transform(way, 4326)) FROM planet_osm_line WHERE way && ST_Transform(ST_MakePolygon(ST_GeomFromText(" + make_square(search_area) + ", 4326)), 900913) AND route != 'ferry' AND route != 'rail'"
-    cursor.execute(sql)
-    result = cursor.fetchall()
-    # return jsonify({
-    #     'status':"failure",
-    #     'message':"Error Occurred at execute sql / " + sql
-    # })
+    #sql = "SELECT name, ST_Astext(ST_Transform(way, 4326)) FROM planet_osm_line WHERE way && ST_Transform(ST_MakePolygon(ST_GeomFromText(" + make_square(search_area) + ", 4326)), 900913) AND route != 'ferry' AND route != 'rail'"
+    sql = "SELECT name, ST_Astext(ST_Transform(way, 4326)) FROM planet_osm_line WHERE ST_Intersects(way, ST_Transform(ST_MakePolygon(ST_GeomFromText(" + make_square(search_area) + ", 4326)), 3857)) AND route != 'ferry' AND route != 'rail'"
+    try:
+        cursor.execute(sql)
+        result = cursor.fetchall()
+    except:
+        return jsonify({
+            'status':"failure",
+            'message':"Error Occurred at execute sql / " + sql
+        })
     cursor.close()
     connect.close()
-#    return str(result)
     temp = result
     way = []
     for i in range(len(temp)):
