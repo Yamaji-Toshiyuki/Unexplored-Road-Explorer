@@ -58,6 +58,27 @@ def user_auth(cursor, user_id, user_name):
         return "Error Occurred at execute sql / " + sql
     return "Successful"
 
+def culc_metre(radius, now_location):
+    temp = now_location
+    now_location = {}
+    now_location["x"] = float(temp.split(",")[0])
+    now_location["y"] = float(temp.split(",")[1])
+    y_diff = (360*float(radius)/(2*math.pi*6356752.314))
+    x_diff = y_diff / math.cos(math.pi * now_location["y"] / 180)
+    result = []
+    result.append(str(now_location["x"] - x_diff) + " " + str(now_location["y"] - y_diff))
+    result.append(str(now_location["x"] - x_diff) + " " + str(now_location["y"] + y_diff))
+    result.append(str(now_location["x"] + x_diff) + " " + str(now_location["y"] - y_diff))
+    result.append(str(now_location["x"] + x_diff) + " " + str(now_location["y"] + y_diff))
+    return result
+
+def make_square(points):
+    result = "'LINESTRING("
+    for i in range(len(points)):
+        result += str(points[i-len(points)]) + ","
+    result += str(points[0]) + ")'"
+    return result
+
 @app.route('/')
 def index():
     return "Server Ready"
@@ -82,7 +103,7 @@ def register(name):
         result = cursor.fetchall()
         sql = "INSERT INTO user_list VALUES( "+ str(result[0][0]) +", '" + str(name) + "')"
         cursor.execute(sql)
-        sql = "CREATE TABLE " + str(result[0][0]) + "_explored (osm_id bigint, ure_id int, way geometry(LineString, 3857), First_time date, latest_date date)"
+        sql = "CREATE TABLE id_" + str(result[0][0]) + "_explored (osm_id bigint, ure_id int, way geometry(LineString, 3857), First_time date, latest_date date)"
         cursor.execute(sql)
         connect.commit()
     except:
@@ -104,30 +125,45 @@ def search_route(radius, now_location):
             'status':"Failure",
             'message':"Error Occured at connect to server / " + connect
         })
-    y_diff = (360*float(radius)/(2*math.pi*6356752.314))
-    x_diff = (360*float(radius)/(math.cos(float(now_location.split(",")[0]))*2*math.pi*6356752.314))
-    point1x = float(now_location.split(",")[0]) - x_diff
-    point2x = float(now_location.split(",")[0]) + x_diff
-    point1y = float(now_location.split(",")[1]) - y_diff
-    point2y = float(now_location.split(",")[1]) + y_diff
-    sql = "SELECT name, ST_Astext(ST_Transform(way, 4326)) FROM planet_osm_line WHERE way && ST_Transform(ST_GeomFromText('LINESTRING(" + str(point1x) + " " + str(point1y) + " , " + str(point2x) + " " + str(point2y) + ")', 4326), 900913);"
-    try:
-        cursor.execute(sql)
-        result = cursor.fetchall()
-    except:
-        return jsonify({
-            'status':"failure",
-            'message':"Error Occurred at execute sql / " + sql
-        })
+    #sql = "SELECT name, ST_Astext(ST_Transform(way, 4326)) FROM planet_osm_line WHERE way && ST_Transform(ST_GeomFromText('LINESTRING(" + str(point1x) + " " + str(point1y) + " , " + str(point2x) + " " + str(point2y) + ")', 4326), 900913) AND route != 'ferry' AND " + str(radius) + " > ST_Distance(ST_GeomFromText('POINT(" + str(now_location[0]) + " " + str(now_location[1]) + ")', 4326), ST_Transform(way, 4326))"
+    #sql = "SELECT name, ST_Astext(ST_Transform(way, 4326)) FROM planet_osm_line WHERE way && ST_Transform(ST_GeomFromText('LINESTRING(" + str(point1x) + " " + str(point1y) + " , " + str(point2x) + " " + str(point2y) + ")', 4326), 3857) AND NOT ST_Disjoint(way, ) AND route != 'ferry' AND route != 'rail'"
+    search_area = culc_metre(radius, now_location)
+    sql = "SELECT name, ST_Astext(ST_Transform(way, 4326)) FROM planet_osm_line WHERE way && ST_Transform(ST_MakePolygon(ST_GeomFromText(" + make_square(search_area) + ", 4326)), 900913) AND route != 'ferry' AND route != 'rail'"
+    cursor.execute(sql)
+    result = cursor.fetchall()
+    # return jsonify({
+    #     'status':"failure",
+    #     'message':"Error Occurred at execute sql / " + sql
+    # })
     cursor.close()
     connect.close()
+#    return str(result)
     temp = result
+    way = []
+    for i in range(len(temp)):
+        way.append(temp[i][1])
+        way[i] = way[i].lstrip("LINESTRING(").rstrip(")")
+        way[i] = way[i].split(",")
+        for j in range(len(way[i])):
+            way[i][j] = way[i][j].split(" ")
+    x_min = float(search_area[0].split(" ")[0])
+    y_min = float(search_area[0].split(" ")[1])
+    x_max = float(search_area[3].split(" ")[0])
+    y_max = float(search_area[3].split(" ")[1])
+    collect = []
+    for i in range(len(way)):
+        collect.append(False)
+        for j in range(len(way[i])):
+            if float(way[i][j][0]) > x_min and float(way[i][j][0]) < x_max and float(way[i][j][1]) > y_min and float(way[i][j][1]) < y_max :
+                collect[i] = True
+                break
     result = []
     for i in range(len(temp)):
-        result.append(dict(name=temp[i][0], way=temp[i][1]))
+        if collect[i] == True:
+            result.append(dict(name=temp[i][0], way=temp[i][1]))
     return jsonify({
         'status':"success",
-        'search_range':"(" + str(point1x) + " " + str(point1y) + "," + str(point2x) + " " + str(point2y) + ")",
+        'search_range':"(" + str(search_area[0]) + "," + str(search_area[3]) + ")",
         'result':result
     })
 
@@ -144,21 +180,35 @@ def logging_switch(user_id, user_name, state):
     auth_result = user_auth(cursor, user_id, user_name)
     if auth_result == "Successful":
         if state == "ON":
-            sql = "CREATE TABLE " + str(user_id) + "_log ( way geometry(LineString, 3857))"
-            cursor.execute(sql)
+            try:
+                sql = "CREATE TABLE id_" + str(user_id) + "_log ( way geometry(Point, 3857))"
+                cursor.execute(sql)
+            except:
+                cursor.close()
+                connect.close()
+                return jsonify({
+                    'status':"failure",
+                    'message':"Error Occurred at execute sql / " + sql
+                })
             connect.commit()
+            cursor.close()
+            connect.close()
             return "logging ready."
         elif state == "OFF":
-            sql = "SELECT * FROM " + str(user_id) + "_log"
-            result = cursor.execute(sql)
-            sql = "DROP TABLE " + str(user_id) + "_log"
+            sql = "SELECT ST_Astext(ST_Transform(way, 3857)) FROM id_" + str(user_id) + "_log"
             cursor.execute(sql)
+            result = cursor.fetchall()
             log = "LINESTRING("
             for i in range(len(result)):
-                log += (str(result[i]) + ",")
-            log += ")"
-            sql = "INSERT INTO " + str(user_id) + "_explored VALUES( None, None, '" + str(log) + "', " + str(datetime.date.today()) + ", None)"
+                log += (str(result[i]).lstrip("('POINT()')").rstrip(")',)") + ",")
+            log = log.rstrip(",") + ")"
+            sql = "INSERT INTO id_" + str(user_id) + "_explored VALUES( null, null, ST_Transform(ST_GeomFromText('" + str(log) + "', 4326), 3857),   null, to_date('" + str(datetime.date.today()) + "', 'YYYY-MM-DD'))"
+            cursor.execute(sql)
+            sql = "DROP TABLE id_" + str(user_id) + "_log"
+            cursor.execute(sql)
             connect.commit()
+            cursor.close()
+            connect.close()
             return "logging finished."
         else:
             return "Error Occurred / state is invalid."
@@ -177,9 +227,11 @@ def logging(user_id, user_name, now_location):
         })
     auth_result = user_auth(cursor, user_id, user_name)
     if auth_result == "Successful":
-        sql = "INSERT INTO " + str(user_id) + "_log VALUES(" + str(now_location.split(",")[0]) + " " + str(now_location.split(",")[1]) + ")"
+        sql = "INSERT INTO id_" + str(user_id) + "_log VALUES(ST_GeomFromText('POINT(" + str(now_location.split(",")[0]) + " " + str(now_location.split(",")[1]) + ")', 3857))"
         cursor.execute(sql)
         connect.commit()
+        cursor.close()
+        connect.close()
         return "Successful"
     else:
         return auth_result
