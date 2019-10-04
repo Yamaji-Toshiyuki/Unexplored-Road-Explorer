@@ -58,6 +58,27 @@ def user_auth(cursor, user_id, user_name):
         return "Error Occurred at execute sql / " + sql
     return "Successful"
 
+def culc_metre(radius, now_location):
+    temp = now_location
+    now_location = {}
+    now_location["x"] = float(temp.split(",")[0])
+    now_location["y"] = float(temp.split(",")[1])
+    y_diff = (360*float(radius)/(2*math.pi*6356752.314))
+    x_diff = y_diff / math.cos(math.pi * now_location["y"] / 180)
+    result = []
+    result.append(str(now_location["x"] - x_diff) + " " + str(now_location["y"] - y_diff))
+    result.append(str(now_location["x"] - x_diff) + " " + str(now_location["y"] + y_diff))
+    result.append(str(now_location["x"] + x_diff) + " " + str(now_location["y"] - y_diff))
+    result.append(str(now_location["x"] + x_diff) + " " + str(now_location["y"] + y_diff))
+    return result
+
+def make_square(points):
+    result = "'LINESTRING("
+    for i in range(len(points)):
+        result += str(points[i-len(points)]) + ","
+    result += str(points[0]) + ")'"
+    return result
+
 @app.route('/')
 def index():
     return "Server Ready"
@@ -104,34 +125,47 @@ def search_route(radius, now_location):
             'status':"Failure",
             'message':"Error Occured at connect to server / " + connect
         })
-    y_diff = (360*float(radius)/(2*math.pi*6356752.314))
-    x_diff = y_diff / math.cos(math.pi * float(now_location.split(",")[1]) / 180)
-    point1x = float(now_location.split(",")[0]) - x_diff
-    point2x = float(now_location.split(",")[0]) + x_diff
-    point1y = float(now_location.split(",")[1]) - y_diff
-    point2y = float(now_location.split(",")[1]) + y_diff
     #sql = "SELECT name, ST_Astext(ST_Transform(way, 4326)) FROM planet_osm_line WHERE way && ST_Transform(ST_GeomFromText('LINESTRING(" + str(point1x) + " " + str(point1y) + " , " + str(point2x) + " " + str(point2y) + ")', 4326), 900913) AND route != 'ferry' AND " + str(radius) + " > ST_Distance(ST_GeomFromText('POINT(" + str(now_location[0]) + " " + str(now_location[1]) + ")', 4326), ST_Transform(way, 4326))"
-    sql = "SELECT name, ST_Astext(ST_Transform(way, 4326)) FROM planet_osm_line WHERE way && ST_Transform(ST_GeomFromText('LINESTRING(" + str(point1x) + " " + str(point1y) + " , " + str(point2x) + " " + str(point2y) + ")', 4326), 3857) AND route != 'ferry' AND route != 'rail'"
-    try:
-        cursor.execute(sql)
-        result = cursor.fetchall()
-    except:
-        return jsonify({
-            'status':"failure",
-            'message':"Error Occurred at execute sql / " + sql
-        })
+    #sql = "SELECT name, ST_Astext(ST_Transform(way, 4326)) FROM planet_osm_line WHERE way && ST_Transform(ST_GeomFromText('LINESTRING(" + str(point1x) + " " + str(point1y) + " , " + str(point2x) + " " + str(point2y) + ")', 4326), 3857) AND NOT ST_Disjoint(way, ) AND route != 'ferry' AND route != 'rail'"
+    search_area = culc_metre(radius, now_location)
+    sql = "SELECT name, ST_Astext(ST_Transform(way, 4326)) FROM planet_osm_line WHERE way && ST_Transform(ST_MakePolygon(ST_GeomFromText(" + make_square(search_area) + ", 4326)), 900913) AND route != 'ferry' AND route != 'rail'"
+    cursor.execute(sql)
+    result = cursor.fetchall()
+    # return jsonify({
+    #     'status':"failure",
+    #     'message':"Error Occurred at execute sql / " + sql
+    # })
     cursor.close()
     connect.close()
+#    return str(result)
     temp = result
+    way = []
+    for i in range(len(temp)):
+        way.append(temp[i][1])
+        way[i] = way[i].lstrip("LINESTRING(").rstrip(")")
+        way[i] = way[i].split(",")
+        for j in range(len(way[i])):
+            way[i][j] = way[i][j].split(" ")
+    x_min = float(search_area[0].split(" ")[0])
+    y_min = float(search_area[0].split(" ")[1])
+    x_max = float(search_area[3].split(" ")[0])
+    y_max = float(search_area[3].split(" ")[1])
+    collect = []
+    for i in range(len(way)):
+        collect.append(False)
+        for j in range(len(way[i])):
+            if float(way[i][j][0]) > x_min and float(way[i][j][0]) < x_max and float(way[i][j][1]) > y_min and float(way[i][j][1]) < y_max :
+                collect[i] = True
+                break
     result = []
     for i in range(len(temp)):
-        result.append(dict(name=temp[i][0], way=temp[i][1]))
+        if collect[i] == True:
+            result.append(dict(name=temp[i][0], way=temp[i][1]))
     return jsonify({
         'status':"success",
-        'search_range':"(" + str(point1x) + " " + str(point1y) + "," + str(point2x) + " " + str(point2y) + ")",
+        'search_range':"(" + str(search_area[0]) + "," + str(search_area[3]) + ")",
         'result':result
     })
-    # return str(result)
 
 @app.route('/logging_switch/<user_id>/<user_name>/<state>')
 def logging_switch(user_id, user_name, state):
