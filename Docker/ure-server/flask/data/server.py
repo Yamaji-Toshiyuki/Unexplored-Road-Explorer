@@ -90,19 +90,26 @@ def map_matching(linestring):
         })
     linestring = linestring.lstrip("LINESTRING(").rstrip(")")
     linestring = linestring.split(",")
-    for i in range(len(linestring))
+    id_exval = {}
+    for i in range(len(linestring)):
         search_area = culc_metre(25, linestring[i].replace(" ", ","))
         sql = "SELECT osm_id FROM planet_osm_line WHERE ST_Intersects(way, ST_Transform(ST_MakePolygon(ST_GeomFromText(" + make_square(search_area) + ", 4326)), 3857)) AND route != 'ferry' AND route != 'rail'"
         cursor.execute(sql)
-        id_temp = cursor.fetchall()
+        id_list = cursor.fetchall()
+        dist = {}
         for j in range(len(id_list)):
-            sql = "SELECT ST_Distance(SELECT way FROM planet_osm_line WHERE osm_id == " + str(id_temp[j]) + ", ST_GeomFromText('POINT(" + linestring[i] + ")'));"
+            sql = "SELECT ST_Distance(SELECT way FROM planet_osm_line WHERE osm_id == " + str(id_list[j]) + ", ST_GeomFromText('POINT(" + linestring[i] + ")'));"
             cursor.execute(sql)
             temp = cursor.fetchall()
-            if temp < dist or j = 0:
-                dist = temp
-                id_list.append()
+            if temp < dist[id_list[j]] or j == 0:
+                dist[id_list[j]] = temp
+        for j in range(len(id_list)):
+            temp = 0
+            if temp == 0 or dist[id_list[j]] > temp:
+                temp = dist[id_list[j]]
+        id_exval[temp] += 1
 
+        
 @app.route('/')
 def index():
     return "Server Ready"
