@@ -81,35 +81,73 @@ def make_square(points):
 
 def map_matching(linestring):
     try:
-        connect = getConnect("ure", "osm_data", "procon30")
-        cursor = connect.cursor()
+        connect_osm = getConnect("ure", "osm_data", "procon30")
+        cursor_osm = connect_osm.cursor()
+        connect_ure = getConnect("ure", "ure_data", "procon30")
+        cursor_ure = connect_ure.cursor()
     except:
         return jsonify({
             'status':"Failure",
-            'message':"Error Occured at connect to server / " + connect
+            'message':"Error Occured at connect to server"
         })
     linestring = linestring.lstrip("LINESTRING(").rstrip(")")
     linestring = linestring.split(",")
-    id_exval = {}
+    match_ids = []
     for i in range(len(linestring)):
         search_area = culc_metre(25, linestring[i].replace(" ", ","))
-        sql = "SELECT osm_id FROM planet_osm_line WHERE ST_Intersects(way, ST_Transform(ST_MakePolygon(ST_GeomFromText(" + make_square(search_area) + ", 4326)), 3857)) AND route != 'ferry' AND route != 'rail'"
-        cursor.execute(sql)
-        id_list = cursor.fetchall()
-        dist = {}
+        sql = "SELECT osm_id FROM planet_osm_line WHERE ST_Intersects(way, ST_Transform(ST_MakePolygon(ST_GeomFromText(" + make_square(search_area) + ", 4326)), 3857)) AND route != 'ferry' AND route != 'rail';"
+        cursor_osm.execute(sql)
+        id_list = cursor_osm.fetchall()
+        dist = 0
+        index = 0
         for j in range(len(id_list)):
-            sql = "SELECT ST_Distance(SELECT way FROM planet_osm_line WHERE osm_id == " + str(id_list[j]) + ", ST_GeomFromText('POINT(" + linestring[i] + ")'));"
+            sql = "SELECT ST_Distance((SELECT way FROM planet_osm_line WHERE osm_id = " + str(id_list[j][0]) + "), ST_GeomFromText('POINT(" + linestring[i] + ")', 3857));"
             cursor.execute(sql)
             temp = cursor.fetchall()
-            if temp < dist[id_list[j]] or j == 0:
-                dist[id_list[j]] = temp
-        for j in range(len(id_list)):
-            temp = 0
-            if temp == 0 or dist[id_list[j]] > temp:
-                temp = dist[id_list[j]]
-        id_exval[temp] += 1
+            if temp < dist or j == 0:
+                dist = temp
+                index = j
+        match_ids.append(id_list[j][0])
+    points = []
+    sql = "SELECT ST_ClosestPoint((SELECT way FROM planet_osm_line WHERE osm_id = " + str(match_ids[0]) + "), ST_GeomFromText('POINT(" + str(linestring[0]) + ")', 3857));"
+    cursor_osm.execute(sql)
+    temp = cursor_osm.fetchall()
+    exclusion = 0
+    points.append(str(0) + "/" + str(temp))
+    for i in range(len(match_ids)):
+        if match_ids[i] != match_ids[i+1]:
+            if i != exclusion:
+                sql = "SELECT ST_ClosestPoint((SELECT way FROM planet_osm_line WHERE osm_id = " + str(match_ids[i]) + "), ST_GeomFromText('POINT(" + str(linestring[i]) + ")', 3857));"
+                cursor_osm.execute(sql)
+                temp = cursor_osm.fetchall()
+                points.append(str(i) + "/" + str(temp))
+            exclusion = i + 1
+            sql = "SELECT ST_ClosestPoint((SELECT way FROM planet_osm_line WHERE osm_id = " + str(match_ids[i+1]) + "), ST_GeomFromText('POINT(" + str(linestring[i+1]) + ")', 3857));"
+            cursor_osm.execute(sql)
+            temp = cursor_osm.fetchall()
+            points.append(str(i+1) + "/" + str(temp))
+    sql = "SELECT ST_ClosestPoint((SELECT way FROM planet_osm_line WHERE osm_id = " + str(match_ids[len(match_ids)]) + "), ST_GeomFromText('POINT(" + str(linestring[0]) + ")', 3857));"
+    cursor_osm.execute(sql)
+    temp = cursor_osm.fetchall()
+    points.append(str(len(match_ids)-1) + "/" + str(temp))
+    for i in range(len(points)):
+        points[i] = points.split("/")
+    way = []
+    for i in range(len(points)):
+        if points[i][0] == points[i+1][0]:
+            sql = "SELECT ST_Transform(way, 4326) FROM planet_osm_line WHERE osm_id = " + str(points[i][0])
+            cursor_osm.execute(sql)
+            temp = cursor_osm.fetchall()
+            temp = temp.lstrip("LINESTRING(").rstrip(")")
+            begin = temp.find(points[i][1])
+            end = temp.find(points[i+1][1]) + len(points[i+1][1])
+            temp = "LINESTRING(" + temp[begin:end] + ")"
+            i = i + 1
+            way.append(str(points[i][0]) + "/" + str(temp))
+        elif points[i-1][0] != points[i][0] and points[i][0] != points[i+1][0]:
+            continue
+    return way
 
-        
 @app.route('/')
 def index():
     return "Server Ready"
@@ -232,8 +270,15 @@ def logging_switch(user_id, user_name, state):
             for i in range(len(result)):
                 log += (str(result[i]).lstrip("('POINT()')").rstrip(")',)") + ",")
             log = log.rstrip(",") + ")"
-            sql = "INSERT INTO id_" + str(user_id) + "_explored VALUES( null, null, ST_Transform(ST_GeomFromText('" + str(log) + "', 4326), 3857),   null, to_date('" + str(datetime.date.today()) + "', 'YYYY-MM-DD'))"
-            cursor.execute(sql)
+            way = map_matching(log)
+            for i in range(len(way)):
+                way[i] = way[i].split("/")
+            for i in range(len(way)):
+                sql = "SELECT COUNT() FROM id_" + str(user_id) + "_explored WHERE osm_id = " + str(way[i][0])
+                cursor.execute(sql)
+                elements = cursor.fetchall()
+                sql = "INSERT INTO id_" + str(user_id) + "_explored VALUES(" + str(way[i][0]) + " ," + str(elements + 1) + " , ST_Transform(ST_GeomFromText('" + str(way[i][1]) + "', 4326), 3857),   null, to_date('" + str(datetime.date.today()) + "', 'YYYY-MM-DD'))"
+                cursor.execute(sql)
             sql = "DROP TABLE id_" + str(user_id) + "_log"
             cursor.execute(sql)
             connect.commit()
