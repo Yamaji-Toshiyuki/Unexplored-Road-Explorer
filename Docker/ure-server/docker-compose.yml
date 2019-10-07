@@ -17,6 +17,7 @@ services:
       - ure-net
 
   postgres:
+    restart: always
     build:
       context: ./postgres
       dockerfile: Dockerfile
