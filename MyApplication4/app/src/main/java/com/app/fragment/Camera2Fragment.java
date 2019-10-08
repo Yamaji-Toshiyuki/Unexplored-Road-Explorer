@@ -42,12 +42,20 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
-import com.app.ExifUtil;
-import com.app.LocationUtil;
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
+import com.app.util.ExifUtil;
+import com.app.util.LocationUtil;
 import com.app.R;
 import com.app.ui.AutoFitTextureView;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -282,7 +290,7 @@ public class Camera2Fragment extends Fragment implements ActivityCompat.OnReques
 			activity.runOnUiThread(new Runnable() {
 				@Override
 				public void run() {
-					Toast.makeText(activity, text, Toast.LENGTH_SHORT).show();
+					Toast.makeText(activity, text, Toast.LENGTH_LONG).show();
 				}
 			});
 		}
@@ -454,7 +462,7 @@ public class Camera2Fragment extends Fragment implements ActivityCompat.OnReques
 
 					@Override
 					public void onImageAvailable(ImageReader reader) {
-						mBackgroundHandler.post(new ImageSaver(reader.acquireNextImage(), mFile, mDate, mLocationUtil.getLocation()));
+						mBackgroundHandler.post(new ImageSaver(reader.acquireNextImage(), mFile, mDate, mLocationUtil.getLocation(), getContext()));
 					}
 
 				}, mBackgroundHandler);
@@ -802,7 +810,7 @@ public class Camera2Fragment extends Fragment implements ActivityCompat.OnReques
 				public void onCaptureCompleted(@NonNull CameraCaptureSession session,
 											   @NonNull CaptureRequest request,
 											   @NonNull TotalCaptureResult result) {
-					showToast("Saved: " + mFile);
+					showToast("Saved capture image");
 					Log.d(TAG, mFile.toString());
 					unlockFocus();
 				}
@@ -880,11 +888,14 @@ public class Camera2Fragment extends Fragment implements ActivityCompat.OnReques
 		 */
 		private final Location mLocation;
 
-		ImageSaver(Image image, File file, Date date, Location location) {
+		private final Context mContext;
+
+		ImageSaver(Image image, File file, Date date, Location location, Context context) {
 			mImage = image;
 			mFile = file;
 			mDate = date;
 			mLocation = location;
+			mContext = context;
 		}
 
 		@Override
@@ -910,8 +921,109 @@ public class Camera2Fragment extends Fragment implements ActivityCompat.OnReques
 			}
 			// ファイルに位置情報と時間のデータをつける
 			ExifUtil.addExif(mDate, mLocation, mFile);
+
+			update(mFile);
 		}
 
+		private void update(final File file){
+			String URL = "http://" + getURL() + "/upload_photo/" + getUserId() + "/" + getUsername();
+
+			RequestQueue queue = Volley.newRequestQueue(mContext);
+
+			StringRequest mRequest = new StringRequest(Request.Method.POST, URL,
+					new Response.Listener<String>() {
+						@Override
+						public void onResponse(String response) {
+							Log.d("success", "capture bitmap upload");
+						}
+					},
+					new Response.ErrorListener() {
+						@Override
+						public void onErrorResponse(VolleyError error) {
+							error.printStackTrace();
+						}
+					}
+			) {
+				@Override
+				public String getBodyContentType() {
+					return "image/jpeg";
+				}
+
+				@Override
+				public byte[] getBody() {
+					byte[] fileBytes = null;
+					byte[] buffer = new byte[256];
+
+					try {
+						FileInputStream input = new FileInputStream(file);
+						ByteArrayOutputStream output = new ByteArrayOutputStream();
+
+						while(input.read(buffer) > 0){
+							output.write(buffer);
+						}
+
+						output.close();
+						input.close();
+
+						fileBytes = output.toByteArray();
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+
+					return fileBytes;
+				}
+			};
+
+			queue.add(mRequest);
+		}
+
+		private String getURL(){
+			try {
+				FileInputStream input = mContext.openFileInput("path");
+
+				byte[] buffer = new byte[128];
+				input.read(buffer);
+
+				String str = new String(buffer);
+				return str.trim();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+
+			return "192.168.11.16:5001";
+		}
+
+		private String getUserId(){
+			try {
+				FileInputStream input = mContext.openFileInput("user_id");
+
+				byte[] buffer = new byte[128];
+				input.read(buffer);
+
+				String str = new String(buffer);
+				return str.trim();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+
+			return null;
+		}
+
+		private String getUsername(){
+			try {
+				FileInputStream input = mContext.openFileInput("user_name");
+
+				byte[] buffer = new byte[128];
+				input.read(buffer);
+
+				String str = new String(buffer);
+				return str.trim();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+
+			return null;
+		}
 	}
 
 	/**

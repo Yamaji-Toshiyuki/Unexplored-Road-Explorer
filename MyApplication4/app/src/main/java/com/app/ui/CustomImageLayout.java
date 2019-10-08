@@ -41,13 +41,13 @@ public class CustomImageLayout extends LinearLayout {
 	public void setImageUri(int index, Uri uri){
 		switch(index){
 			case 0:
-				Picasso.with(getContext()).load(uri).into(imageView1);
+				Picasso.get().load(uri).into(imageView1);
 				break;
 			case 1:
-				Picasso.with(getContext()).load(uri).into(imageView2);
+				Picasso.get().load(uri).into(imageView2);
 				break;
 			case 2:
-				Picasso.with(getContext()).load(uri).into(imageView3);
+				Picasso.get().load(uri).into(imageView3);
 				break;
 		}
 	}

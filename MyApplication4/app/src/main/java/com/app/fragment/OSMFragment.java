@@ -36,6 +36,8 @@ import org.osmdroid.views.overlay.compass.InternalCompassOrientationProvider;
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider;
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay;
 
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -50,10 +52,12 @@ public class OSMFragment extends Fragment {
 	private MapView mMapView;
 	private MyLocationNewOverlay myLocationOverlay;
 
-	private Marker mMarker;
 	private Button mButton;
 	private Button mButtonSearch;
 	private EditText mEdit;
+
+	private List<Polyline> polyLines = new ArrayList<>();
+	private Polyline rangeLine;
 
 	/**
 	 * アダプターで管理するためにインスタンスを生成して返す
@@ -61,6 +65,7 @@ public class OSMFragment extends Fragment {
 	static OSMFragment newInstance(){
 		OSMFragment fragment = new OSMFragment();
 		Bundle bundle = new Bundle();
+		bundle.putString("fragment", "osm");
 		fragment.setArguments(bundle);
 
 		return fragment;
@@ -68,7 +73,7 @@ public class OSMFragment extends Fragment {
 
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle saveInstanceState) {
-		View v = inflater.inflate(R.layout.fragment_map, null);
+		View v = inflater.inflate(R.layout.fragment_map, container, false);
 		mButton = v.findViewById(R.id.button);
 		mButtonSearch = v.findViewById(R.id.button_search);
 		mEdit = v.findViewById(R.id.edit_search);
@@ -108,11 +113,6 @@ public class OSMFragment extends Fragment {
 		mCompassOverlay.enableCompass();
 		mMapView.getOverlays().add(mCompassOverlay);
 
-		// 回転ジェスチャーを有効にする
-		/*RotationGestureOverlay mRotationOverlay = new RotationGestureOverlay(mMapView);
-		mRotationOverlay.setEnabled(true);
-		mMapView.getOverlays().add(mRotationOverlay);*/
-
 		// ピンチでズーム
 		mMapView.setMultiTouchControls(true);
 		// 地図上の文字をスケーリングする
@@ -129,14 +129,22 @@ public class OSMFragment extends Fragment {
 		mButton.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View v) {
+				GeoPoint geo = myLocationOverlay.getMyLocation();
+				if(geo == null){
+					// 位置情報を更新する
+					myLocationOverlay = new MyLocationNewOverlay(new GpsMyLocationProvider(Objects.requireNonNull(getContext())), mMapView);
+					myLocationOverlay.enableMyLocation();		// 現在地にマーカーを表示する
+					mMapView.getOverlays().add(myLocationOverlay);
+					return;
+				}
 				// 現在地に画面をスナップする
 				IMapController mapController = mMapView.getController();
-				mapController.setCenter(myLocationOverlay.getMyLocation());
+				mapController.setCenter(geo);
 			}
 		});
 
 
-		mMarker = new Marker(mMapView);
+		Marker mMarker = new Marker(mMapView);
 
 		// マーカーのクリックリスナーを設定する
 		mMarker.setOnMarkerClickListener(new Marker.OnMarkerClickListener() {
@@ -182,6 +190,9 @@ public class OSMFragment extends Fragment {
 				searchRoadVolley();
 			}
 		});
+		mButtonSearch.setVisibility(View.VISIBLE);
+
+		mEdit.setVisibility(View.VISIBLE);
 	}
 
 	@Override
@@ -195,8 +206,15 @@ public class OSMFragment extends Fragment {
 
 	@Override
 	public void onDestroyView(){
-		super.onDestroyView();
 		mMapView.onDetach();
+		myLocationOverlay = null;
+		mButton = null;
+		mButtonSearch = null;
+		mEdit = null;
+		polyLines.clear();
+		rangeLine = null;
+
+		super.onDestroyView();
 	}
 
 	@Override
@@ -208,27 +226,26 @@ public class OSMFragment extends Fragment {
 		}
 	}
 
-	protected void searchRoadVolley(){
-		// サーバーのアドレス
+	private void searchRoadVolley(){
 		GeoPoint geo = myLocationOverlay.getMyLocation();
 		if(geo == null){
+			// 位置情報を更新する
 			myLocationOverlay = new MyLocationNewOverlay(new GpsMyLocationProvider(Objects.requireNonNull(getContext())), mMapView);
 			myLocationOverlay.enableMyLocation();		// 現在地にマーカーを表示する
 			mMapView.getOverlays().add(myLocationOverlay);
 			return;
 		}
+
 		String zoom = String.valueOf(mEdit.getText());
 		try {
 			if(zoom.length() < 1){
 				zoom = "1";
 			}
-			else if(Integer.parseInt(zoom) > 1000){
-				zoom = "1000";
-			}
 		}catch (NumberFormatException e){
 			zoom = "1";
 		}
-		String URL = "http://192.168.11.16:5001/search_road/" + zoom + "/" + geo.getLongitude() + "," + geo.getLatitude();
+		// サーバーのアドレス
+		String URL = "http://" + getURL() + "/search_road/" + getUserId() + "/" + getUsername() + "/" + zoom + "/" + geo.getLongitude() + "," + geo.getLatitude();
 
 		// リクエストキュー
 		RequestQueue getQueue = Volley.newRequestQueue(Objects.requireNonNull(getContext()));
@@ -260,11 +277,71 @@ public class OSMFragment extends Fragment {
 		getQueue.add(mRequest);
 	}
 
+	private String getURL(){
+		try {
+			FileInputStream input = Objects.requireNonNull(getContext()).openFileInput("path");
+
+			byte[] buffer = new byte[128];
+			if(input.read(buffer) == 0){
+				return "192.168.11.16:5001";
+			}
+
+			String str = new String(buffer);
+			return str.trim();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		return "192.168.11.16:5001";
+	}
+
+	private String getUserId(){
+		try {
+			FileInputStream input = getContext().openFileInput("user_id");
+
+			byte[] buffer = new byte[128];
+			if(input.read(buffer) == 0){
+				return null;
+			}
+
+			String str = new String(buffer);
+			return str.trim();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		return null;
+	}
+
+	private String getUsername(){
+		try {
+			FileInputStream input = getContext().openFileInput("user_name");
+
+			byte[] buffer = new byte[128];
+			if(input.read(buffer) == 0){
+				return null;
+			}
+
+			String str = new String(buffer);
+			return str.trim();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		return null;
+	}
+
 	private void drawRange(String str){
 		mMapView.getOverlays().remove(rangeLine);
 
 		rangeLine = new Polyline(mMapView);
 		rangeLine.setColor(0xFF0099CC);
+		rangeLine.setOnClickListener(new Polyline.OnClickListener() {
+			@Override
+			public boolean onClick(Polyline polyline, MapView mapView, GeoPoint eventPos) {
+				return false;
+			}
+		});
 
 		double[] lat = new double[2];
 		double[] lon = new double[2];
@@ -287,34 +364,37 @@ public class OSMFragment extends Fragment {
 		mMapView.invalidate();
 	}
 
-	private List<Polyline> polylines = new ArrayList<>();
-	private Polyline rangeLine;
-
 	private void drawRoad(JSONArray response){
-		for(Polyline poly:polylines){
+		for(Polyline poly:polyLines){
 			mMapView.getOverlays().remove(poly);
 		}
 
 		for(int i = 0; i < response.length(); i++){
 			try {
 				// 線の色を青に指定する
-				polylines.add(i, new Polyline(mMapView));
-				polylines.get(i).setColor(0xFF00BFFF);
+				polyLines.add(i, new Polyline(mMapView));
+				polyLines.get(i).setColor(0xFF00BFFF);
+				polyLines.get(i).setOnClickListener(new Polyline.OnClickListener() {
+					@Override
+					public boolean onClick(Polyline polyline, MapView mapView, GeoPoint eventPos) {
+						return false;
+					}
+				});
 
 				// JSONArrayから道情報を取得する
 				JSONObject object = response.getJSONObject(i);
 				String str = object.getString("way");
-				String[] way = str.substring(11, str.length() - 1).split(Pattern.quote(","), 0);
+				String[] way = str.substring(11, str.length() - 2).split(Pattern.quote(","), 0);
 				for(String point:way) {
 					int spacerPos = point.indexOf(' ');
 
 					GeoPoint gPt = new GeoPoint(Double.parseDouble(point.substring(spacerPos + 1)),
 							Double.parseDouble(point.substring(0, spacerPos)));
 					// ポイントごとにジオポイントを作成する
-					polylines.get(i).addPoint(gPt);
+					polyLines.get(i).addPoint(gPt);
 				}
 
-				mMapView.getOverlays().add(polylines.get(i));
+				mMapView.getOverlays().add(polyLines.get(i));
 			} catch (JSONException e) {
 				e.printStackTrace();
 			}

@@ -55,4 +55,16 @@
         android:textColor="#000"
         android:textSize="30sp"/>
 
+    <ImageButton
+        android:id="@+id/user_reset"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
+        android:layout_margin="10dp"
+        android:padding="5dp"
+        android:scaleType="fitCenter"
+        android:background="#0000"
+        android:src="@drawable/option"/>
+
 </RelativeLayout>
