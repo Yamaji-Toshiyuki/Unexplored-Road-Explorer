@@ -8,4 +8,14 @@
 
     <string name="tap_start">TAP TO START</string>
     <string name="user_id">UserID :</string>
+    <string name="title_location">位置情報の取得停止</string>
+    <string name="body_location">位置情報の取得を停止します。</string>
+    <string name="button_location">停止</string>
+    <string name="title_background">バックグラウンド</string>
+    <string name="body_background">アプリケーションを終了しても、バックグラウンドで位置情報を取得する。</string>
+    <string name="title_stop_application">アプリケーションを終了する</string>
+    <string name="button_stop_application">終了</string>
+    <string name="hint_server_url">server url</string>
+    <string name="button_server_start">初期化</string>
+    <string name="button_server_end">更新</string>
 </resources>

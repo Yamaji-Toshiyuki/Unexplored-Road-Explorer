@@ -34,6 +34,9 @@ import org.osmdroid.views.overlay.Polyline;
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider;
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay;
 
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
@@ -51,6 +54,7 @@ public class SearchFragment extends Fragment {
 	static SearchFragment newInstance(){
 		SearchFragment fragment = new SearchFragment();
 		Bundle bundle = new Bundle();
+		bundle.putString("fragment", "search");
 		fragment.setArguments(bundle);
 
 		return fragment;
@@ -173,7 +177,7 @@ public class SearchFragment extends Fragment {
 	 */
 	private void searchVolley(GeoPoint myLocation, GeoPoint destLocation){
 		// サーバーのアドレス
-		String URL = "http://192.168.11.16:5001/search_" + myLocation + destLocation;
+		String URL = "http://" + getURL() + "/search_" + myLocation + destLocation;
 		// リクエストキュー
 		RequestQueue getQueue = Volley.newRequestQueue(Objects.requireNonNull(getContext()));
 		// リクエスト
@@ -194,6 +198,22 @@ public class SearchFragment extends Fragment {
 					}
 				});
 		getQueue.add(mRequest);
+	}
+
+	private String getURL(){
+		try {
+			FileInputStream input = getContext().openFileInput("path");
+
+			byte[] buffer = new byte[128];
+			input.read(buffer);
+
+			String str = new String(buffer);
+			return str.trim();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		return "192.168.11.16:5001";
 	}
 
 	/**

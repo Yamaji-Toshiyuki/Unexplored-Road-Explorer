@@ -7,8 +7,10 @@ import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.MotionEvent;
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -32,7 +34,8 @@ import java.io.IOException;
 
 public class StartActivity extends AppCompatActivity {
 
-	private final int REQUEST_CODE = 2000;
+	private final int REQUEST_CODE_PERMISSION = 2000;
+	private final int REQUEST_CODE_ACTIVITY = 3000;
 
 	private TextView text1;
 	private TextView text2;
@@ -40,6 +43,7 @@ public class StartActivity extends AppCompatActivity {
 	private ImageView logo;
 
 	private EditText editText;
+
 	private TextView userName;
 	private AlertDialog dialog;
 	private boolean isEntry = false;
@@ -61,7 +65,7 @@ public class StartActivity extends AppCompatActivity {
 					Manifest.permission.CAMERA,
 					Manifest.permission.WRITE_EXTERNAL_STORAGE
 			};
-			ActivityCompat.requestPermissions(this, permission, REQUEST_CODE);
+			ActivityCompat.requestPermissions(this, permission, REQUEST_CODE_PERMISSION);
 		}
 
 		setContentView(R.layout.activity_start);
@@ -70,6 +74,22 @@ public class StartActivity extends AppCompatActivity {
 		text3 = findViewById(R.id.text3);
 		logo = findViewById(R.id.logo);
 
+		ImageButton userReset = findViewById(R.id.user_reset);
+		userReset.setOnClickListener(new View.OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				createDialog().show();
+			}
+		});
+
+		// サーバーのURLを決める
+		setRequestURL();
+
+		// ユーザー登録が済んでいるか確認する
+		isEntry = readUsername();
+	}
+
+	private AlertDialog createDialog(){
 		editText = new EditText(this);
 		editText.setHint("user name");
 		// ユーザー名を保存する
@@ -89,7 +109,7 @@ public class StartActivity extends AppCompatActivity {
 				.create();
 		dialog.setCanceledOnTouchOutside(false);
 
-		isEntry = readUsername();
+		return dialog;
 	}
 
 	/**
@@ -116,23 +136,23 @@ public class StartActivity extends AppCompatActivity {
 
 	/**
 	 * ユーザーIDがあるか確認して表示する
-	 * ない場合は登録用ダイアログを表示する
+	 * ない場合は登録用ダイアログを表示させる
 	 */
 	protected boolean readUsername(){
 		// ユーザー名を取得して表示する
 		try {
-			FileInputStream in = openFileInput("user_id");
+			FileInputStream input = openFileInput("user_id");
 			userName = findViewById(R.id.user_name);
 
 			byte[] buffer = new byte[128];
-			in.read(buffer);
-			userName.setText(new String(buffer).trim());
+			if(input.read(buffer) != 0){
+				userName.setText(new String(buffer).trim());
+			}
 
-			in.close();
+			input.close();
 			return true;
 		} catch (FileNotFoundException e) {
 			// ユーザー名のファイルがなかったらダイアログを表示する
-			isEntry = false;
 			text3.setText(null);
 			return false;
 		} catch (IOException e) {
@@ -147,7 +167,7 @@ public class StartActivity extends AppCompatActivity {
 	 */
 	protected void pushVolley(final String username) {
 		// サーバーのアドレス
-		String GET_URL = "http://192.168.11.16:5001/register/" + username;
+		String GET_URL = "http://" + getURL() + "/register/" + username;
 		// リクエストキュー
 		RequestQueue getQueue = Volley.newRequestQueue(this);
 
@@ -175,6 +195,34 @@ public class StartActivity extends AppCompatActivity {
 		getQueue.add(mRequest);
 	}
 
+	private String getURL(){
+		try {
+			FileInputStream input = openFileInput("path");
+
+			byte[] buffer = new byte[128];
+			if(input.read(buffer) == 0){
+				return "192.168.11.16:5001";
+			}
+
+			String str = new String(buffer);
+			return str.trim();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		return "192.168.11.16:5001";
+	}
+
+	private void setRequestURL(){
+		try {
+			FileOutputStream out = openFileOutput("path", MODE_PRIVATE);
+			out.write("192.168.11.16:5001".getBytes());
+			out.close();
+		} catch (IOException ex) {
+			ex.printStackTrace();
+		}
+	}
+
 	/**
 	 * 画面のタッチイベントを取得
 	 */
@@ -184,12 +232,12 @@ public class StartActivity extends AppCompatActivity {
 		if(event.getAction() == MotionEvent.ACTION_UP) {
 			if(isEntry){
 				Intent intent = new Intent(this, MainActivity.class);
-				startActivity(intent);
+				startActivityForResult(intent, REQUEST_CODE_ACTIVITY);
 				release();
 			}
 			else {
 				// ユーザー登録が済んでいないならダイアログを表示
-				dialog.show();
+				createDialog().show();
 			}
 		}
 		return true;
@@ -199,27 +247,12 @@ public class StartActivity extends AppCompatActivity {
 	 * メモリが不足するのでリリースする
 	 */
 	private void release(){
-		if(logo != null){
-			logo.setImageDrawable(null);
-		}
-		if(text1 != null){
-			text1.setBackground(null);
-		}
-		if(text2 != null){
-			text2.setText(null);
-		}
-		if(text3 != null){
-			text3.setText(null);
-		}
-		if(userName != null){
-			userName.setText(null);
-		}
-		if(dialog != null){
-			dialog = null;
-		}
-		if(editText != null){
-			editText = null;
-		}
+		logo.setImageDrawable(null);
+		text1.setBackground(null);
+		text2.setText(null);
+		text3.setText(null);
+		userName.setText(null);
+		dialog = null;
 	}
 
 	/**
@@ -227,11 +260,25 @@ public class StartActivity extends AppCompatActivity {
 	 */
 	@Override
 	public void onRequestPermissionsResult(int requestCode, @NonNull String[] permission, @NonNull int[] grantResults){
-		if(requestCode == REQUEST_CODE) {
+		if(requestCode == REQUEST_CODE_PERMISSION) {
 			for(int i = 0; i < permission.length; i++) {
 				if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {
 					finish();
 				}
+			}
+		}
+	}
+
+	/**
+	 * startActivityForResultの結果を受け取る
+	 */
+	@Override
+	protected void onActivityResult(int requestCode, int resultCode, Intent data){
+		super.onActivityResult(requestCode, resultCode, data);
+		if(requestCode == REQUEST_CODE_ACTIVITY){
+			// 終了ボタンを押していたら終了する
+			if(data.getBooleanExtra("finish", false)){
+				finish();
 			}
 		}
 	}
