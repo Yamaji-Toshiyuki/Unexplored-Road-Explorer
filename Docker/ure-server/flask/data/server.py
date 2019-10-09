@@ -82,8 +82,8 @@ def culc_metre(radius, now_location):
     result = []
     result.append(str(now_location["x"] - x_diff) + " " + str(now_location["y"] - y_diff))
     result.append(str(now_location["x"] - x_diff) + " " + str(now_location["y"] + y_diff))
-    result.append(str(now_location["x"] + x_diff) + " " + str(now_location["y"] - y_diff))
     result.append(str(now_location["x"] + x_diff) + " " + str(now_location["y"] + y_diff))
+    result.append(str(now_location["x"] + x_diff) + " " + str(now_location["y"] - y_diff))
     return result
 
 def make_square(points):
@@ -110,11 +110,12 @@ def map_matching(linestring):
     print("log = " + str(linestring))
     match_ids = []
     for i in range(len(linestring)):
-        search_area = culc_metre(25, linestring[i].replace(" ", ","))
+        print(str(len(linestring)) + " " + str(i))
+        search_area = culc_metre(100, linestring[i].replace(" ", ","))
         sql = "SELECT osm_id FROM planet_osm_line WHERE ST_Intersects(way, ST_Transform(ST_MakePolygon(ST_GeomFromText(" + make_square(search_area) + ", 4326)), 3857)) AND route != 'ferry' AND route != 'rail';"
         cursor_osm.execute(sql)
         id_list = cursor_osm.fetchall()
-        print("id_lists = " + str(id_list))
+        # print("id_lists = " + str(id_list))
         dist = 0
         index = 0
         for j in range(len(id_list)):
@@ -124,8 +125,16 @@ def map_matching(linestring):
             if temp[0][0] < dist or j == 0:
                 dist = temp
                 index = j
-        match_ids.append(id_list[index][0])
+        try:
+            match_ids.append(id_list[index][0])
+        except IndexError:
+            linestring.pop(i)
+            i -= 1
+        except:
+            print("Error Occured at search nearest road from\" " + str(linestring[i]) + "\".")
         print("match_ids = " + str(match_ids))
+        if len(linestring)-1 <= i+1:
+            break
     points = []
     for i in range(len(match_ids)):
         sql = "SELECT ST_AsText(ST_Transform(ST_ClosestPoint((SELECT way FROM planet_osm_line WHERE osm_id = " + str(match_ids[i]) + "), ST_Transform(ST_GeomFromText('POINT(" + str(linestring[i]) + ")', 4326),3857)), 4326));"
@@ -206,20 +215,30 @@ def search_road(user_id, user_name, radius, now_location):
     auth_result = user_auth(user_id, user_name)
     if auth_result == "Successful":
         search_area = culc_metre(radius, now_location)
-        sql = "SELECT osm_id, name, ST_Astext(ST_Transform(way, 4326)) FROM planet_osm_line WHERE ST_Intersects(way, ST_Transform(ST_MakePolygon(ST_GeomFromText(" + make_square(search_area) + ", 4326)), 3857)) AND route != 'ferry' AND route != 'rail'"
+        sql = "select osm_id, name, ST_Astext(ST_Transform(way, 4326)) from planet_osm_line where st_intersects(way, st_transform(st_makepolygon(st_geomfromtext(" + make_square(search_area) + ", 4326)), 3857))"
+        print(sql)
         cursor_osm.execute(sql)
         roads = cursor_osm.fetchall()
-        sql = "SELECT osm_id, ST_Astext(ST_Transform(way, 4326)) FROM id_" + str(user_id) + "_explored WHERE osm_id = "
+        print(len(roads))
+        sql = "SELECT osm_id, ST_Astext(ST_Transform(way, 4326)) FROM id_" + str(user_id) + "_explored"
         for i in range(len(roads)):
-            sql += str(roads[i][0])
-            if i+1 < len(roads):
-                sql += " OR osm_id = "
+            if i == 0 :
+                sql += " WHERE osm_id = " + str(roads[i][0])
+            else:
+                sql += " OR osm_id = " + str(roads[i][0])
         cursor_ure.execute(sql)
         exproads = cursor_ure.fetchall()
         cursor_osm.close()
         connect_osm.close()
         cursor_ure.close()
         connect_ure.close()
+        if exproads == None:
+            result = roads[:][1:2]
+            return jsonify({
+                'status':"success",
+                'search_range':"(" + str(search_area[0]) + "," + str(search_area[2]) + ")",
+                'result':result
+            })
         result = []
         for i in range(len(roads)):
             flag = 0
@@ -228,6 +247,8 @@ def search_road(user_id, user_name, radius, now_location):
                     temp = str(exproads[j][1])
                     temp = temp.lstrip("LINESTRING(").rstrip(")")
                     index = roads[i][2].find(temp)
+                    if index == -1:
+                        continue
                     print(index)
                     result.append([roads[i][1], "LINESTRING(" + roads[i][2][:index].rstrip(",") + ")"])
                     result.append([roads[i][1], "LINESTRING(" + roads[i][2][index+len(temp):].lstrip(",") + ")"])
@@ -244,8 +265,8 @@ def search_road(user_id, user_name, radius, now_location):
                 way[i][j] = way[i][j].split(" ")
         x_min = float(search_area[0].split(" ")[0])
         y_min = float(search_area[0].split(" ")[1])
-        x_max = float(search_area[3].split(" ")[0])
-        y_max = float(search_area[3].split(" ")[1])
+        x_max = float(search_area[2].split(" ")[0])
+        y_max = float(search_area[2].split(" ")[1])
         collect = []
         for i in range(len(way)):
             collect.append(False)
@@ -260,7 +281,7 @@ def search_road(user_id, user_name, radius, now_location):
                 result.append(dict(name=temp[i][0], way=temp[i][1]))
         return jsonify({
             'status':"success",
-            'search_range':"(" + str(search_area[0]) + "," + str(search_area[3]) + ")",
+            'search_range':"(" + str(search_area[0]) + "," + str(search_area[2]) + ")",
             'result':result
         })
     else:
