@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="vertical" android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:descendantFocusability="beforeDescendants"
+    android:focusableInTouchMode="true">
 
     <RelativeLayout
         android:id="@+id/action_bar"
@@ -12,8 +14,8 @@
 
         <ImageButton
             android:id="@+id/button_back"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
+            android:layout_width="70dp"
+            android:layout_height="70dp"
             android:padding="5dp"
             android:layout_centerVertical="true"
             android:layout_alignParentStart="true"
@@ -23,100 +25,241 @@
 
     </RelativeLayout>
 
-    <TextView
-        android:id="@+id/location"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentStart="true"
-        android:layout_alignParentTop="true"
-        android:layout_marginStart="70dp"
-        android:layout_marginTop="100dp"
-        android:background="#2000"
-        android:text="位置情報の取得停止"
-        android:textColor="#000"
-        android:textSize="30sp" />
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@+id/action_bar">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@+id/location"
-        android:layout_alignParentStart="true"
-        android:layout_marginStart="100dp"
-        android:layout_marginTop="27dp"
-        android:background="#2555"
-        android:text="位置情報の取得を停止します。"
-        android:textColor="#000"
-        android:textSize="25sp" />
+        <TableLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:shrinkColumns="0, 1"
+            android:stretchColumns="0, 1">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@+id/location"
-        android:layout_alignParentStart="true"
-        android:layout_marginStart="70dp"
-        android:layout_marginTop="130dp"
-        android:background="#2000"
-        android:text="バックグラウンド"
-        android:textColor="#000"
-        android:textSize="30sp" />
+            <TableRow
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="5dp"
+                android:background="@drawable/shadow">
 
-    <TextView
-        android:layout_width="400dp"
-        android:layout_height="wrap_content"
-        android:layout_below="@+id/location"
-        android:layout_alignParentStart="true"
-        android:layout_marginStart="90dp"
-        android:layout_marginTop="204dp"
-        android:background="#2555"
-        android:text="アプリケーションを終了しても、
-        バックグラウンドで位置情報を取得する。"
-        android:textColor="#000"
-        android:textSize="25sp" />
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_weight="2">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@+id/location"
-        android:layout_alignParentStart="true"
-        android:layout_marginStart="70dp"
-        android:layout_marginTop="378dp"
-        android:background="#2555"
-        android:text="アプリケーションを終了する"
-        android:textColor="#000"
-        android:textSize="30sp" />
+                    <TextView
+                        android:id="@+id/title1"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_margin="10dp"
+                        android:padding="3dp"
+                        android:background="#2000"
+                        android:text="@string/title_location"
+                        android:textColor="#000"
+                        android:textSize="20sp"/>
 
-    <Button
-        android:id="@+id/switch1"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentEnd="true"
-        android:text="停止"
-        android:textColor="#000"
-        android:textSize="25sp"
-        android:layout_marginTop="135dp"
-        android:layout_marginEnd="124dp" />
+                    <TextView
+                        android:id="@+id/body1"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="20dp"
+                        android:layout_marginBottom="10dp"
+                        android:padding="3dp"
+                        android:background="#2555"
+                        android:text="@string/body_location"
+                        android:textColor="#000"
+                        android:textSize="15sp" />
 
-    <Switch
-        android:id="@+id/switch2"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentEnd="true"
-        android:layout_marginTop="344dp"
-        android:layout_marginEnd="150dp"
-        android:checked="true"/>
+                </LinearLayout>
 
-    <Button
-        android:id="@+id/button_finish"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentEnd="true"
-        android:text="終了"
-        android:textColor="#000"
-        android:textSize="25sp"
-        android:layout_marginTop="510dp"
-        android:layout_marginEnd="124dp" />
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_gravity="center_vertical"
+                    android:layout_weight="1">
+
+                    <Button
+                        android:id="@+id/stop_service"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_horizontal"
+                        android:text="@string/button_location"
+                        android:textColor="#000"
+                        android:textSize="20sp" />
+
+                </LinearLayout>
+
+            </TableRow>
+
+            <TableRow
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="10dp"
+                android:background="@drawable/shadow">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_weight="2">
+
+                    <TextView
+                        android:id="@+id/title2"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_margin="10dp"
+                        android:padding="3dp"
+                        android:background="#2000"
+                        android:text="@string/title_background"
+                        android:textColor="#000"
+                        android:textSize="30sp" />
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginStart="20dp"
+                        android:layout_marginBottom="10dp"
+                        android:padding="3dp"
+                        android:background="#2555">
+
+                        <TextView
+                            android:id="@+id/body2"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/body_background"
+                            android:textColor="#000"
+                            android:textSize="25sp" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_gravity="center_vertical"
+                    android:layout_weight="1">
+
+                    <Switch
+                        android:id="@+id/switch2"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_horizontal"
+                        android:checked="true"/>
+
+                </LinearLayout>
+
+            </TableRow>
+
+            <TableRow
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="10dp"
+                android:background="@drawable/shadow">
+
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_weight="2">
+
+                    <TextView
+                        android:id="@+id/title3"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_margin="10dp"
+                        android:padding="3dp"
+                        android:layout_gravity="center_vertical"
+                        android:background="#2555"
+                        android:text="@string/title_stop_application"
+                        android:textColor="#000"
+                        android:textSize="30sp" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_gravity="center_vertical"
+                    android:layout_weight="1">
+
+                    <Button
+                        android:id="@+id/stop_application"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_horizontal"
+                        android:text="@string/button_stop_application"
+                        android:textColor="#000"
+                        android:textSize="25sp" />
+
+                </LinearLayout>
+
+            </TableRow>
+
+            <TableRow
+                android:id="@+id/secret_row"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="10dp"
+                android:visibility="invisible"
+                android:background="@drawable/shadow">
+
+                <EditText
+                    android:id="@+id/edit_text"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="10dp"
+                    android:padding="3dp"
+                    android:layout_gravity="center_vertical"
+                    android:layout_weight="2"
+                    android:background="#2555"
+                    android:textColor="#000"
+                    android:textSize="20sp"
+                    android:hint="@string/hint_server_url"
+                    android:importantForAutofill="no"
+                    android:inputType="text" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_gravity="center_vertical"
+                    android:layout_weight="1">
+
+                    <Button
+                        android:id="@+id/button_edit_reload"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="0dp"
+                        android:layout_weight="1"
+                        android:text="@string/button_server_start"
+                        android:textColor="#000"
+                        android:padding="0dp"
+                        android:textSize="15sp" />
+
+                    <Button
+                        android:id="@+id/button_edit_set"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="0dp"
+                        android:layout_weight="1"
+                        android:text="@string/button_server_end"
+                        android:textColor="#000"
+                        android:padding="0dp"
+                        android:textSize="15sp" />
+
+                </LinearLayout>
+
+            </TableRow>
+
+        </TableLayout>
+
+    </ScrollView>
 
 </RelativeLayout>

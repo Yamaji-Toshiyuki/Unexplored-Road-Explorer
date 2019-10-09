@@ -10,11 +10,11 @@ import androidx.appcompat.widget.AppCompatImageView;
 public class CustomImageView extends AppCompatImageView {
 
 	public CustomImageView(Context context) {
-		super(context, null);
+		this(context, null);
 	}
 
 	public CustomImageView(Context context, AttributeSet attrs){
-		super(context, attrs, 0);
+		this(context, attrs, 0);
 	}
 
 	public CustomImageView(Context context, AttributeSet attrs, int defStyleAttr){

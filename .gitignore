@@ -1,2 +1,3 @@
 Docker/ure-server/postgres/data/ure/download/japan-latest.osm.pbf
 *.pyc
+*.pbf

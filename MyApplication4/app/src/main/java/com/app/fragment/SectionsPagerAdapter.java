@@ -1,10 +1,17 @@
 package com.app.fragment;
 
+import android.view.ViewGroup;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentPagerAdapter;
+import androidx.fragment.app.FragmentStatePagerAdapter;
+
+import com.app.R;
+
+import java.util.zip.Inflater;
 
 /**
  * A [FragmentPagerAdapter] that returns a fragment corresponding to
@@ -12,8 +19,10 @@ import androidx.fragment.app.FragmentPagerAdapter;
  */
 public class SectionsPagerAdapter extends FragmentPagerAdapter {
 
-	public SectionsPagerAdapter(FragmentManager fm) {
-		super(fm);
+	private Fragment mCurrentFragment;
+
+	public SectionsPagerAdapter(FragmentManager fm, int behavior) {
+		super(fm, behavior);
 	}
 
 	@NonNull
@@ -32,6 +41,14 @@ public class SectionsPagerAdapter extends FragmentPagerAdapter {
 		}
 	}
 
+	@Override
+	public void setPrimaryItem(ViewGroup container, int position, Object object){
+		if(mCurrentFragment != object){
+			mCurrentFragment = (Fragment) object;
+		}
+		super.setPrimaryItem(container, position, object);
+	}
+
 	@Nullable
 	@Override
 	public CharSequence getPageTitle(int position) {
@@ -42,5 +59,9 @@ public class SectionsPagerAdapter extends FragmentPagerAdapter {
 	public int getCount() {
 		// Show 3 total pages.
 		return 3;
+	}
+
+	public Fragment getCurrentFragment(){
+		return mCurrentFragment;
 	}
 }
