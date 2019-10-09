@@ -1,4 +1,4 @@
-FROM postgres:latest
+FROM postgres:11.5
 
 MAINTAINER Toshiyuki_YAMAJI<nexus02221toshiyuki@gmail.com>
 
