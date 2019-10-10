@@ -198,7 +198,10 @@ def register(name):
         })
     cursor.close()
     connect.close()
-    return str(result[0][0])
+    return jsonify({
+        'status':"success",
+        'id':str(result[0][0])
+    })
     
 @app.route('/search_road/<user_id>/<user_name>/<radius>/<now_location>')
 def search_road(user_id, user_name, radius, now_location):
