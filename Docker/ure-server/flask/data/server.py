@@ -119,10 +119,12 @@ def map_matching(linestring):
         dist = 0
         index = 0
         for j in range(len(id_list)):
-            sql = "SELECT ST_Distance((SELECT way FROM planet_osm_line WHERE osm_id = " + str(id_list[j][0]) + "), ST_Transform(ST_GeomFromText('POINT(" + linestring[i] + ")', 4326), 3857));"
+            sql = "SELECT ST_Distance((SELECT way FROM planet_osm_line WHERE osm_id = " + str(id_list[j][0]) + " LIMIT 1), ST_Transform(ST_GeomFromText('POINT(" + linestring[i] + ")', 4326), 3857));"
             cursor_osm.execute(sql)
             temp = cursor_osm.fetchall()
-            if temp[0][0] < dist or j == 0:
+            temp = temp[0][0]
+            if temp < dist or j == 0:
+                print(temp)
                 dist = temp
                 index = j
         try:
@@ -137,7 +139,7 @@ def map_matching(linestring):
             break
     points = []
     for i in range(len(match_ids)):
-        sql = "SELECT ST_AsText(ST_Transform(ST_ClosestPoint((SELECT way FROM planet_osm_line WHERE osm_id = " + str(match_ids[i]) + "), ST_Transform(ST_GeomFromText('POINT(" + str(linestring[i]) + ")', 4326),3857)), 4326));"
+        sql = "SELECT ST_AsText(ST_Transform(ST_ClosestPoint((SELECT way FROM planet_osm_line WHERE osm_id = " + str(match_ids[i]) + " LIMIT 1), ST_Transform(ST_GeomFromText('POINT(" + str(linestring[i]) + ")', 4326),3857)), 4326));"
         cursor_osm.execute(sql)
         temp = cursor_osm.fetchall()
         points.append(str(i) + "/" + str(temp[0][0]))
