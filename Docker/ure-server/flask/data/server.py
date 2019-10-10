@@ -172,6 +172,50 @@ def index():
 def favicon():
     return app.send_static_file("images/fav.ico")
 
+@app.route('/user_auth/<user_id>/<user_name>')
+def user_auth_alt(user_id, user_name):
+    try:
+        connect_osm = getConnect("ure", "osm_data", "procon30")
+        cursor_osm = connect_osm.cursor()
+        connect_ure = getConnect("ure", "ure_data", "procon30")
+        cursor_ure = connect_ure.cursor()
+    except:
+        return jsonify({
+            'status':"Failure",
+            'message':"Error Occured at connect to server"
+        })
+    sql = "SELECT user_name FROM user_list WHERE user_id=" + str(user_id)
+    try:
+        cursor_ure.execute(sql)
+        result = cursor_ure.fetchall()
+        if user_name != result[0][0]:
+            raise ValueError()
+    except ValueError:
+        cursor_osm.close()
+        cursor_ure.close()
+        connect_osm.close()
+        connect_ure.close()
+        return jsonify({
+            'status':"failure",
+            'message':"Error Occurred at Authentication / " + sql
+        })
+    except:
+        cursor_osm.close()
+        cursor_ure.close()
+        connect_osm.close()
+        connect_ure.close()
+        return jsonify({
+            'status':"failure",
+            'message':"Error Occurred at execute sql / " + sql
+        })
+    cursor_osm.close()
+    cursor_ure.close()
+    connect_osm.close()
+    connect_ure.close()
+    return jsonify({
+        'status':"success"
+    })
+
 @app.route('/register/<name>')
 def register(name):
     try:
