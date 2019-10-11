@@ -5,12 +5,15 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
 
 import com.app.fragment.GalleryFragment;
+import com.app.fragment.OSMFragment;
+import com.app.util.SharedPreferencesUtil;
 import com.app.util.VariableUtil;
 import com.google.android.material.tabs.TabLayout;
 
@@ -40,11 +43,14 @@ public class MainActivity extends AppCompatActivity {
 	private SectionsPagerAdapter sectionsPagerAdapter;
 
 	private VariableUtil variable;
+	private SharedPreferencesUtil preferences;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
+
+		preferences = new SharedPreferencesUtil(this);
 
 		variable = new VariableUtil();
 		variable.setIsLocationService(true);
@@ -151,6 +157,8 @@ public class MainActivity extends AppCompatActivity {
 				}
 				break;
 			case REQUEST_CODE_OPTION:
+				preferences.setIsDemo(data.getBooleanExtra("isDemo", false));
+				preferences.setIsDebug(data.getBooleanExtra("isDebug", false));
 				variable.setIsForeground(data.getBooleanExtra("isForeground", variable.getIsForeground()));
 				variable.setIsLocationService(data.getBooleanExtra("isForeground", variable.getIsLocationService()));
 				Intent service = new Intent(this, LocationService.class);
@@ -248,5 +256,14 @@ public class MainActivity extends AppCompatActivity {
 		}
 
 		return flag;
+	}
+
+	@Override
+	public boolean onKeyDown(int keyCode, KeyEvent event){
+		if(keyCode == KeyEvent.KEYCODE_BACK){
+			finish();
+			return true;
+		}
+		return false;
 	}
 }

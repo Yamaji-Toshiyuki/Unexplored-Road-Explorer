@@ -21,7 +21,7 @@ public class Camera2Activity extends AppCompatActivity {
 		setContentView(R.layout.activity_camera);
 
 		// 撮影用フラグメントを呼ぶ
-		fragment = Camera2Fragment.newInstance();
+		fragment = Camera2Fragment.newInstance(Camera2Fragment.MODE_CAMERA);
 		getSupportFragmentManager().beginTransaction()
 				.replace(R.id.fragment_container, fragment)
 				.commit();

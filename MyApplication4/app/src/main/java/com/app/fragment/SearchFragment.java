@@ -36,7 +36,9 @@ import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
@@ -119,15 +121,37 @@ public class SearchFragment extends Fragment {
 		Drawable image = getResources().getDrawable(R.drawable.marker, null);
 		mMarker.setIcon(image);
 
+		/*polyline = new Polyline();
+		polyline.setColor(0x807AADCC);
+		polyline.setOnClickListener(new Polyline.OnClickListener() {
+			@Override
+			public boolean onClick(Polyline polyline, MapView mapView, GeoPoint eventPos) {
+				return false;
+			}
+		});*/
+
 		// シングルタップのイベントを設定する
 		MapEventsReceiver mEventsReceiver = new MapEventsReceiver() {
 			@Override
 			public boolean singleTapConfirmedHelper(GeoPoint p) {
+				/*mMapView.getOverlays().remove(mMarker);
+				mMarker.setPosition(p);
+				mMapView.getOverlays().add(mMarker);
+				mMapView.invalidate();
+				array.add(p);
+				return true*/
 				return false;
 			}
 
 			@Override
 			public boolean longPressHelper(GeoPoint p) {
+				/*for(GeoPoint geo:array){
+					polyline.addPoint(geo);
+				}
+				mMapView.getOverlays().add(polyline);
+				mMapView.invalidate();
+				array.clear();*/
+
 				mMapView.getOverlays().remove(mMarker);
 				mMarker.setPosition(p);
 				mMapView.getOverlays().add(mMarker);
@@ -143,10 +167,13 @@ public class SearchFragment extends Fragment {
 			@Override
 			public void onClick(View v) {
 				// 調べる
-				searchVolley(mLocationOverlay.getMyLocation(), mMarker.getPosition());
+//				searchVolley(mLocationOverlay.getMyLocation(), mMarker.getPosition());
 			}
 		});
 	}
+
+	/*private List<GeoPoint> array = new ArrayList<>();
+	private Polyline polyline;*/
 
 	@Override
 	public void onPause(){
@@ -223,7 +250,7 @@ public class SearchFragment extends Fragment {
 		try {
 			// 線の色を青に指定する
 			Polyline polyline = new Polyline(mMapView);
-			polyline.setColor(0xFF00BFFF);
+			polyline.setColor(0x7aadcc);
 
 			// JSONObjectから道情報を取得する
 			String lines = object.getString("way");

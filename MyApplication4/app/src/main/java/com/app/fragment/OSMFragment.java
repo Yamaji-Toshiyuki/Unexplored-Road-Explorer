@@ -2,15 +2,23 @@ package com.app.fragment;
 
 import androidx.fragment.app.Fragment;
 
+import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.drawable.Drawable;
+import android.location.Location;
+import android.media.Image;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.util.Log;
+import android.util.SparseArray;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
+import android.widget.Toast;
 
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -19,6 +27,11 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 import com.app.R;
+import com.app.ReadQRCodeCamera2Dialog;
+import com.app.util.LocationNewOverlayUtil;
+import com.google.android.gms.vision.Frame;
+import com.google.android.gms.vision.barcode.Barcode;
+import com.google.android.gms.vision.barcode.BarcodeDetector;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -34,10 +47,13 @@ import org.osmdroid.views.overlay.Polyline;
 import org.osmdroid.views.overlay.compass.CompassOverlay;
 import org.osmdroid.views.overlay.compass.InternalCompassOrientationProvider;
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider;
-import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay;
 
+import java.io.BufferedInputStream;
+import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -49,12 +65,15 @@ public class OSMFragment extends Fragment {
 	private static final double MAP_LON = 133.6354;
 	private static final double MAP_ZOOM = 15.0;
 
+	private final int REQUEST_CODE = 3002;
+
 	private MapView mMapView;
-	private MyLocationNewOverlay myLocationOverlay;
+	private LocationNewOverlayUtil myLocationOverlay;
 
 	private Button mButton;
 	private Button mButtonSearch;
 	private EditText mEdit;
+	private ImageButton qrReadButton;
 
 	private List<Polyline> polyLines = new ArrayList<>();
 	private Polyline rangeLine;
@@ -74,9 +93,11 @@ public class OSMFragment extends Fragment {
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle saveInstanceState) {
 		View v = inflater.inflate(R.layout.fragment_map, container, false);
+
 		mButton = v.findViewById(R.id.button);
 		mButtonSearch = v.findViewById(R.id.button_search);
 		mEdit = v.findViewById(R.id.edit_search);
+		qrReadButton = v.findViewById(R.id.qr_button);
 
 		mMapView = v.findViewById(R.id.mapview);
 		mMapView.setDestroyMode(false);
@@ -99,7 +120,10 @@ public class OSMFragment extends Fragment {
 		mMapView.invalidate();
 
 		// 現在地を表示
-		myLocationOverlay = new MyLocationNewOverlay(new GpsMyLocationProvider(Objects.requireNonNull(getContext())), mMapView);
+		myLocationOverlay = new LocationNewOverlayUtil(new GpsMyLocationProvider(Objects.requireNonNull(getContext())), mMapView);
+		//
+		// TODO ここで疑似ロケーションを渡す
+		//
 		myLocationOverlay.enableMyLocation();		// 現在地にマーカーを表示する
 		myLocationOverlay.enableFollowLocation();	// 現在地に画面をスナップする
 		mMapView.getOverlays().add(myLocationOverlay);
@@ -132,7 +156,7 @@ public class OSMFragment extends Fragment {
 				GeoPoint geo = myLocationOverlay.getMyLocation();
 				if(geo == null){
 					// 位置情報を更新する
-					myLocationOverlay = new MyLocationNewOverlay(new GpsMyLocationProvider(Objects.requireNonNull(getContext())), mMapView);
+					myLocationOverlay = new LocationNewOverlayUtil(new GpsMyLocationProvider(Objects.requireNonNull(getContext())), mMapView);
 					myLocationOverlay.enableMyLocation();		// 現在地にマーカーを表示する
 					mMapView.getOverlays().add(myLocationOverlay);
 					return;
@@ -193,6 +217,18 @@ public class OSMFragment extends Fragment {
 		mButtonSearch.setVisibility(View.VISIBLE);
 
 		mEdit.setVisibility(View.VISIBLE);
+
+		qrReadButton.setOnClickListener(new View.OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				Intent intent = new Intent(getContext(), ReadQRCodeCamera2Dialog.class);
+				startActivityForResult(intent, REQUEST_CODE);
+			}
+		});
+
+		detector = new BarcodeDetector.Builder(getContext())
+				.setBarcodeFormats(Barcode.DATA_MATRIX | Barcode.QR_CODE)
+				.build();
 	}
 
 	@Override
@@ -226,11 +262,55 @@ public class OSMFragment extends Fragment {
 		}
 	}
 
+	private BarcodeDetector detector;
+
+	@Override
+	public void onActivityResult(int requestCode, int resultCode, Intent data) {
+		super.onActivityResult(requestCode, resultCode, data);
+
+		if(requestCode == REQUEST_CODE){
+			if(data != null) {
+//				String str = data.getStringExtra("qrcode");
+
+				/*int spacePos = str.indexOf(',');
+				String lat = str.substring(0, spacePos);
+				String lon = str.substring(spacePos + 1);
+
+				Location location = new Location("?");
+				location.setLatitude(Double.parseDouble(lat));
+				location.setLongitude(Double.parseDouble(lon));
+				myLocationOverlay.setMyLocation(location, true);*/
+
+				File file = new File(Objects.requireNonNull(getActivity()).getExternalFilesDir(null), "barcode.jpg");
+				Bitmap bitmap = null;
+				try {
+					InputStream input = new FileInputStream(file);
+					bitmap = BitmapFactory.decodeStream(new BufferedInputStream(input));
+				} catch (FileNotFoundException e) {
+					e.printStackTrace();
+				}
+
+				if (detector.isOperational()) {
+					assert bitmap != null;
+					Frame frame = new Frame.Builder().setBitmap(bitmap).build();
+					SparseArray<Barcode> barcodes = detector.detect(frame);
+					if(barcodes.size() > 0){
+						Barcode thisCode = barcodes.valueAt(0);
+						Toast.makeText(getContext(), thisCode.rawValue, Toast.LENGTH_LONG).show();
+						Log.w("qrcode", thisCode.rawValue);
+					}
+				} else {
+					Log.e("barcode", "barcode detector not operational");
+				}
+			}
+		}
+	}
+
 	private void searchRoadVolley(){
 		GeoPoint geo = myLocationOverlay.getMyLocation();
 		if(geo == null){
 			// 位置情報を更新する
-			myLocationOverlay = new MyLocationNewOverlay(new GpsMyLocationProvider(Objects.requireNonNull(getContext())), mMapView);
+			myLocationOverlay = new LocationNewOverlayUtil(new GpsMyLocationProvider(Objects.requireNonNull(getContext())), mMapView);
 			myLocationOverlay.enableMyLocation();		// 現在地にマーカーを表示する
 			mMapView.getOverlays().add(myLocationOverlay);
 			return;
@@ -335,7 +415,7 @@ public class OSMFragment extends Fragment {
 		mMapView.getOverlays().remove(rangeLine);
 
 		rangeLine = new Polyline(mMapView);
-		rangeLine.setColor(0xFF0099CC);
+		rangeLine.setColor(0x7aadcc);
 		rangeLine.setOnClickListener(new Polyline.OnClickListener() {
 			@Override
 			public boolean onClick(Polyline polyline, MapView mapView, GeoPoint eventPos) {
@@ -373,7 +453,7 @@ public class OSMFragment extends Fragment {
 			try {
 				// 線の色を青に指定する
 				polyLines.add(i, new Polyline(mMapView));
-				polyLines.get(i).setColor(0xFF00BFFF);
+				polyLines.get(i).setColor(0x7aadcc);
 				polyLines.get(i).setOnClickListener(new Polyline.OnClickListener() {
 					@Override
 					public boolean onClick(Polyline polyline, MapView mapView, GeoPoint eventPos) {

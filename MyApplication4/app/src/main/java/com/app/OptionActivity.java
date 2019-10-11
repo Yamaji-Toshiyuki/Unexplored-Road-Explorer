@@ -18,6 +18,7 @@ import android.widget.TextView;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.app.util.SharedPreferencesUtil;
 import com.app.util.VariableUtil;
 
 import java.io.FileInputStream;
@@ -36,6 +37,9 @@ public class OptionActivity extends AppCompatActivity {
 	private int debugCount;
 	private TableRow debugRow;
 
+	private boolean isDemo;
+	private boolean isDebug;
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -47,6 +51,8 @@ public class OptionActivity extends AppCompatActivity {
 
 		intent = getIntent();
 		variableUtil = (VariableUtil) intent.getSerializableExtra(VariableUtil.SERIAL_NAME);
+
+		SharedPreferencesUtil preferences = new SharedPreferencesUtil(this);
 
 		// トグルスイッチのインスタンス生成
 		Switch toggleSwitch = findViewById(R.id.switch2);
@@ -60,10 +66,23 @@ public class OptionActivity extends AppCompatActivity {
 				}
 				if(debugCount > 10){
 					debugRow.setVisibility(View.VISIBLE);
+					isDebug = true;
 				}
 			}
 		});
 
+		// デモンストレーション用
+		Switch demoSwitch = findViewById(R.id.switch3);
+		isDemo = preferences.getIsDemo();
+		demoSwitch.setChecked(isDemo);
+		demoSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+			@Override
+			public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+				isDemo = isChecked;
+			}
+		});
+
+		// buttonのスケールを決める
 		float scale = getResources().getDisplayMetrics().density;
 		int size;
 		if(Build.VERSION.SDK_INT <= 24){
@@ -74,14 +93,16 @@ public class OptionActivity extends AppCompatActivity {
 		}
 		RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(size, size);
 
-		intent = new Intent();
 		// 戻るボタンを押したら戻る
 		ImageButton back = findViewById(R.id.button_back);
 		back.setLayoutParams(params);
 		back.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View v) {
+				Intent intent = new Intent();
 				intent.putExtra("isLocationServer", variableUtil.getIsLocationService());
+				intent.putExtra("isDemo", isDemo);
+				intent.putExtra("isDebug", isDebug);
 				setResult(RESULT_OK, intent);
 				finish();
 			}

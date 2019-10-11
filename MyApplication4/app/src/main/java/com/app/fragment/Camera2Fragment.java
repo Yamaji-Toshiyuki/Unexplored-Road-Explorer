@@ -5,6 +5,8 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.graphics.Point;
@@ -28,6 +30,7 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Log;
 import android.util.Size;
+import android.util.SparseArray;
 import android.util.SparseIntArray;
 import android.view.LayoutInflater;
 import android.view.Surface;
@@ -48,10 +51,14 @@ import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
+import com.app.ReadQRCodeCamera2Dialog;
 import com.app.util.ExifUtil;
 import com.app.util.LocationUtil;
 import com.app.R;
 import com.app.ui.AutoFitTextureView;
+import com.google.android.gms.vision.Frame;
+import com.google.android.gms.vision.barcode.Barcode;
+import com.google.android.gms.vision.barcode.BarcodeDetector;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -70,6 +77,13 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 public class Camera2Fragment extends Fragment implements ActivityCompat.OnRequestPermissionsResultCallback {
+
+	public static final String MODE_CAMERA = "camera";
+	public static final String MODE_BARCODE = "barcode";
+
+	public interface onOkClickedListener{
+		void onClicked();
+	}
 
 	/**
 	 * Conversion from screen rotation to JPEG orientation.
@@ -345,8 +359,13 @@ public class Camera2Fragment extends Fragment implements ActivityCompat.OnReques
 		}
 	}
 
-	public static Camera2Fragment newInstance(){
-		return new Camera2Fragment();
+	public static Camera2Fragment newInstance(String str){
+		Camera2Fragment fragment = new Camera2Fragment();
+		Bundle bundle = new Bundle();
+		bundle.putString("mode", str);
+		fragment.setArguments(bundle);
+
+		return fragment;
 	}
 
 	@Override
@@ -366,6 +385,8 @@ public class Camera2Fragment extends Fragment implements ActivityCompat.OnReques
 		mTextureView = view.findViewById(R.id.texture_view);
 	}
 
+	private boolean modeFlag = true;
+
 	@Override
 	public void onActivityCreated(Bundle saveInstanceState){
 		super.onActivityCreated(saveInstanceState);
@@ -374,8 +395,16 @@ public class Camera2Fragment extends Fragment implements ActivityCompat.OnReques
 		mLocationUtil = new LocationUtil();
 		// 日付を取得してファイルネームを決める
 		mDate = new Date();
-		String filename = ExifUtil.getFilename(mDate);
-
+		String filename = null;
+		assert getArguments() != null;
+		if(MODE_CAMERA.equals(getArguments().getString("mode"))){
+			filename = ExifUtil.getFilename(mDate);
+			modeFlag = true;
+		}
+		else if(MODE_BARCODE.equals(getArguments().getString("mode"))){
+			filename = "barcode.jpg";
+			modeFlag = false;
+		}
 		mFile = new File(Objects.requireNonNull(getActivity()).getExternalFilesDir(null), filename);
 	}
 
@@ -459,10 +488,10 @@ public class Camera2Fragment extends Fragment implements ActivityCompat.OnReques
 				mImageReader = ImageReader.newInstance(largest.getWidth(), largest.getHeight(),
 						ImageFormat.JPEG, /*maxImages*/2);
 				mImageReader.setOnImageAvailableListener(new ImageReader.OnImageAvailableListener() {
-
 					@Override
 					public void onImageAvailable(ImageReader reader) {
-						mBackgroundHandler.post(new ImageSaver(reader.acquireNextImage(), mFile, mDate, mLocationUtil.getLocation(), getContext()));
+						Image image = reader.acquireNextImage();
+						mBackgroundHandler.post(new ImageSaver(image, mFile, mDate, mLocationUtil.getLocation(), getContext(), getActivity(), modeFlag));
 					}
 
 				}, mBackgroundHandler);
@@ -810,7 +839,9 @@ public class Camera2Fragment extends Fragment implements ActivityCompat.OnReques
 				public void onCaptureCompleted(@NonNull CameraCaptureSession session,
 											   @NonNull CaptureRequest request,
 											   @NonNull TotalCaptureResult result) {
-					showToast("Saved capture image");
+					if(modeFlag){
+						showToast("Saved capture image");
+					}
 					Log.d(TAG, mFile.toString());
 					unlockFocus();
 				}
@@ -889,13 +920,17 @@ public class Camera2Fragment extends Fragment implements ActivityCompat.OnReques
 		private final Location mLocation;
 
 		private final Context mContext;
+		private final Activity mActivity;
+		private final boolean mBol;
 
-		ImageSaver(Image image, File file, Date date, Location location, Context context) {
+		ImageSaver(Image image, File file, Date date, Location location, Context context, Activity activity, boolean bol) {
 			mImage = image;
 			mFile = file;
 			mDate = date;
 			mLocation = location;
 			mContext = context;
+			mActivity = activity;
+			mBol = bol;
 		}
 
 		@Override
@@ -919,10 +954,18 @@ public class Camera2Fragment extends Fragment implements ActivityCompat.OnReques
 					}
 				}
 			}
-			// ファイルに位置情報と時間のデータをつける
-			ExifUtil.addExif(mDate, mLocation, mFile);
 
-			update(mFile);
+			if(mBol){
+				// ファイルに位置情報と時間のデータをつける
+				ExifUtil.addExif(mDate, mLocation, mFile);
+
+				update(mFile);
+			}
+			else {
+				ReadQRCodeCamera2Dialog dialog = (ReadQRCodeCamera2Dialog) mActivity;
+				assert dialog != null;
+				dialog.onClicked();
+			}
 		}
 
 		private void update(final File file){

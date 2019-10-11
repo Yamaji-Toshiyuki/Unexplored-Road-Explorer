@@ -18,7 +18,20 @@
         android:background="#0000"
         style="?android:attr/borderlessButtonStyle"/>
 
+    <ImageButton
+        android:id="@+id/qr_button"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_margin="10dp"
+        android:padding="5dp"
+        android:layout_alignParentEnd="true"
+        android:background="#0000"
+        android:scaleType="fitCenter"
+        android:src="@drawable/camera"/>
+    <!--android:visibility="invisible"-->
+
     <LinearLayout
+        android:id="@+id/layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
