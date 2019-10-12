@@ -196,7 +196,7 @@ public class MainActivity extends AppCompatActivity {
 		if(!sub_dir.exists()){
 			boolean p = sub_dir.mkdir();
 			if(!p){
-				Log.d("err", "Failed make dir");
+				Log.i("err", "Failed make dir");
 			}
 		}
 
@@ -209,10 +209,10 @@ public class MainActivity extends AppCompatActivity {
 				InputStream is = getAssetInputStream();
 				boolean ret = copyStream(is, fos);
 				if(ret){
-					Log.d("stream", "Successful");
+					Log.i("stream", "Successful");
 				}
 				else{
-					Log.d("err", "Failed");
+					Log.i("err", "Failed");
 				}
 				is.close();
 			} catch (IOException err) {

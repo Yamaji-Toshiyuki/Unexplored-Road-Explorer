@@ -18,6 +18,7 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 import com.app.R;
+import com.app.util.SharedPreferencesUtil;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -203,10 +204,11 @@ public class SearchFragment extends Fragment {
 	 * 現在地から目的地までの経路を検索する
 	 */
 	private void searchVolley(GeoPoint myLocation, GeoPoint destLocation){
+		SharedPreferencesUtil util = new SharedPreferencesUtil(Objects.requireNonNull(getContext()));
 		// サーバーのアドレス
-		String URL = "http://" + getURL() + "/search_" + myLocation + destLocation;
+		String URL = "http://" + util.getServerIP() + "/search_" + myLocation + destLocation;
 		// リクエストキュー
-		RequestQueue getQueue = Volley.newRequestQueue(Objects.requireNonNull(getContext()));
+		RequestQueue getQueue = Volley.newRequestQueue(getContext());
 		// リクエスト
 		JsonObjectRequest mRequest = new JsonObjectRequest(Request.Method.GET, URL,
 				// 通信成功
@@ -227,22 +229,6 @@ public class SearchFragment extends Fragment {
 		getQueue.add(mRequest);
 	}
 
-	private String getURL(){
-		try {
-			FileInputStream input = getContext().openFileInput("path");
-
-			byte[] buffer = new byte[128];
-			input.read(buffer);
-
-			String str = new String(buffer);
-			return str.trim();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-		return "192.168.11.16:5001";
-	}
-
 	/**
 	 * JSONObjectをパースしてマップに線を引く
 	 */
@@ -250,7 +236,7 @@ public class SearchFragment extends Fragment {
 		try {
 			// 線の色を青に指定する
 			Polyline polyline = new Polyline(mMapView);
-			polyline.setColor(0x7aadcc);
+			polyline.setColor(0x7AADCC);
 
 			// JSONObjectから道情報を取得する
 			String lines = object.getString("way");

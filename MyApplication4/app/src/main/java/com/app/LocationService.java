@@ -17,6 +17,7 @@ import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
+import com.app.util.SharedPreferencesUtil;
 import com.app.util.VariableUtil;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
@@ -33,12 +34,15 @@ public class LocationService extends Service {
 
 	private MyLocationCallBack mCallBack;
 
+	private SharedPreferencesUtil util;
+
 	@Override
 	public void onCreate(){
 		super.onCreate();
 
 		// LocationClient クラスのインスタンスを作成
 		mLocation = LocationServices.getFusedLocationProviderClient(this);
+		util = new SharedPreferencesUtil(this);
 
 		// 位置情報取得開始
 		startUpdateLocation();
@@ -118,8 +122,8 @@ public class LocationService extends Service {
 		};
 
 		// URLの断片
-		String SERVER_FLASK = "http://" + getURL();
-		String USER_STATE = getUserId() + "/" + getUsername();
+		String SERVER_FLASK = "http://" + util.getServerIP();
+		String USER_STATE = util.getUserId() + "/" + util.getUserName();
 
 		private Location currentLocation;
 
@@ -135,7 +139,7 @@ public class LocationService extends Service {
 			Location location = locationResult.getLastLocation();
 			currentLocation = getBetterLocation(location, currentLocation);
 			sendLocationVolley(currentLocation);
-			Log.d("log", location.getLatitude() + "/" + location.getLongitude());
+			Log.i("log", location.getLatitude() + "/" + location.getLongitude());
 		}
 
 		/**
@@ -158,7 +162,7 @@ public class LocationService extends Service {
 					new Response.Listener<String>() {
 						@Override
 						public void onResponse(String response) {
-							Log.d("success", msg + " logging");
+							Log.i("success", msg + " logging");
 							Toast.makeText(getApplicationContext(), msg + " logging", Toast.LENGTH_LONG).show();
 						}
 					}, errorListener);
@@ -181,60 +185,6 @@ public class LocationService extends Service {
 					}, errorListener);
 
 			queue.add(request);
-		}
-
-		private String getURL(){
-			try {
-				FileInputStream input = getApplicationContext().openFileInput("path");
-
-				byte[] buffer = new byte[128];
-				if(input.read(buffer) == 0){
-					return "192.168.11.16:5001";
-				}
-
-				String str = new String(buffer);
-				return str.trim();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-
-			return "192.168.11.16:5001";
-		}
-
-		private String getUserId(){
-			try {
-				FileInputStream input = getApplicationContext().openFileInput("user_id");
-
-				byte[] buffer = new byte[128];
-				if(input.read(buffer) == 0){
-					return null;
-				}
-
-				String str = new String(buffer);
-				return str.trim();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-
-			return null;
-		}
-
-		private String getUsername(){
-			try {
-				FileInputStream input = getApplicationContext().openFileInput("user_name");
-
-				byte[] buffer = new byte[128];
-				if(input.read(buffer) == 0){
-					return null;
-				}
-
-				String str = new String(buffer);
-				return str.trim();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-
-			return null;
 		}
 	}
 

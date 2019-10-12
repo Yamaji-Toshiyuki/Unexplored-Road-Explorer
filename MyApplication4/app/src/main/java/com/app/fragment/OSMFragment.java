@@ -29,6 +29,7 @@ import com.android.volley.toolbox.Volley;
 import com.app.R;
 import com.app.ReadQRCodeCamera2Dialog;
 import com.app.util.LocationNewOverlayUtil;
+import com.app.util.SharedPreferencesUtil;
 import com.google.android.gms.vision.Frame;
 import com.google.android.gms.vision.barcode.Barcode;
 import com.google.android.gms.vision.barcode.BarcodeDetector;
@@ -78,6 +79,8 @@ public class OSMFragment extends Fragment {
 	private List<Polyline> polyLines = new ArrayList<>();
 	private Polyline rangeLine;
 
+	private SharedPreferencesUtil util;
+
 	/**
 	 * アダプターで管理するためにインスタンスを生成して返す
 	 */
@@ -109,6 +112,8 @@ public class OSMFragment extends Fragment {
 	public void onActivityCreated(Bundle savedInstanceState) {
 		super.onActivityCreated(savedInstanceState);
 
+		util = new SharedPreferencesUtil(getContext());
+
 		Configuration.getInstance().load(getContext(), PreferenceManager.getDefaultSharedPreferences(getContext()));
 
 		// ネットからタイルソースをとってこない
@@ -124,6 +129,12 @@ public class OSMFragment extends Fragment {
 		//
 		// TODO ここで疑似ロケーションを渡す
 		//
+
+		Location location = new Location("?");
+		location.setLatitude(MAP_LAT);
+		location.setLongitude(MAP_LON);
+		myLocationOverlay.setMyLocation(location, true);
+
 		myLocationOverlay.enableMyLocation();		// 現在地にマーカーを表示する
 		myLocationOverlay.enableFollowLocation();	// 現在地に画面をスナップする
 		mMapView.getOverlays().add(myLocationOverlay);
@@ -325,7 +336,7 @@ public class OSMFragment extends Fragment {
 			zoom = "1";
 		}
 		// サーバーのアドレス
-		String URL = "http://" + getURL() + "/search_road/" + getUserId() + "/" + getUsername() + "/" + zoom + "/" + geo.getLongitude() + "," + geo.getLatitude();
+		String URL = "http://" + util.getServerIP() + "/search_road/" + util.getUserId() + "/" + util.getUserName() + "/" + zoom + "/" + geo.getLongitude() + "," + geo.getLatitude();
 
 		// リクエストキュー
 		RequestQueue getQueue = Volley.newRequestQueue(Objects.requireNonNull(getContext()));
@@ -357,65 +368,11 @@ public class OSMFragment extends Fragment {
 		getQueue.add(mRequest);
 	}
 
-	private String getURL(){
-		try {
-			FileInputStream input = Objects.requireNonNull(getContext()).openFileInput("path");
-
-			byte[] buffer = new byte[128];
-			if(input.read(buffer) == 0){
-				return "192.168.11.16:5001";
-			}
-
-			String str = new String(buffer);
-			return str.trim();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-		return "192.168.11.16:5001";
-	}
-
-	private String getUserId(){
-		try {
-			FileInputStream input = getContext().openFileInput("user_id");
-
-			byte[] buffer = new byte[128];
-			if(input.read(buffer) == 0){
-				return null;
-			}
-
-			String str = new String(buffer);
-			return str.trim();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-		return null;
-	}
-
-	private String getUsername(){
-		try {
-			FileInputStream input = getContext().openFileInput("user_name");
-
-			byte[] buffer = new byte[128];
-			if(input.read(buffer) == 0){
-				return null;
-			}
-
-			String str = new String(buffer);
-			return str.trim();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-		return null;
-	}
-
 	private void drawRange(String str){
 		mMapView.getOverlays().remove(rangeLine);
 
 		rangeLine = new Polyline(mMapView);
-		rangeLine.setColor(0x7aadcc);
+		rangeLine.setColor(0x7AADCC);
 		rangeLine.setOnClickListener(new Polyline.OnClickListener() {
 			@Override
 			public boolean onClick(Polyline polyline, MapView mapView, GeoPoint eventPos) {
@@ -453,7 +410,7 @@ public class OSMFragment extends Fragment {
 			try {
 				// 線の色を青に指定する
 				polyLines.add(i, new Polyline(mMapView));
-				polyLines.get(i).setColor(0x7aadcc);
+				polyLines.get(i).setColor(0x7AADCC);
 				polyLines.get(i).setOnClickListener(new Polyline.OnClickListener() {
 					@Override
 					public boolean onClick(Polyline polyline, MapView mapView, GeoPoint eventPos) {

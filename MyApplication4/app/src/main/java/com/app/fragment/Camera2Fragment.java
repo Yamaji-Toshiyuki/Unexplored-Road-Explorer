@@ -4,6 +4,8 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.content.res.AssetFileDescriptor;
+import android.content.res.AssetManager;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -23,8 +25,10 @@ import android.hardware.camera2.CaptureResult;
 import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.location.Location;
+import android.media.AudioAttributes;
 import android.media.Image;
 import android.media.ImageReader;
+import android.media.SoundPool;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -45,9 +49,12 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
+import com.android.volley.AuthFailureError;
+import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
+import com.android.volley.RetryPolicy;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
@@ -56,9 +63,13 @@ import com.app.util.ExifUtil;
 import com.app.util.LocationUtil;
 import com.app.R;
 import com.app.ui.AutoFitTextureView;
+import com.app.util.SharedPreferencesUtil;
 import com.google.android.gms.vision.Frame;
 import com.google.android.gms.vision.barcode.Barcode;
 import com.google.android.gms.vision.barcode.BarcodeDetector;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -71,7 +82,10 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
@@ -84,6 +98,9 @@ public class Camera2Fragment extends Fragment implements ActivityCompat.OnReques
 	public interface onOkClickedListener{
 		void onClicked();
 	}
+
+	private SoundPool mSound;
+	private int soundShutter;
 
 	/**
 	 * Conversion from screen rotation to JPEG orientation.
@@ -391,6 +408,27 @@ public class Camera2Fragment extends Fragment implements ActivityCompat.OnReques
 	public void onActivityCreated(Bundle saveInstanceState){
 		super.onActivityCreated(saveInstanceState);
 
+		AudioAttributes attr = new AudioAttributes.Builder()
+				.setUsage(AudioAttributes.USAGE_MEDIA)
+				.setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+				.build();
+
+		mSound = new SoundPool.Builder()
+				.setAudioAttributes(attr)
+				.setMaxStreams(1)
+				.build();
+
+		Activity activity = getActivity();
+		AssetManager manager = activity.getResources().getAssets();
+		AssetFileDescriptor descriptor = null;
+		try {
+			descriptor = manager.openFd("camera.mp3");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		soundShutter = mSound.load(descriptor, 1);
+
 		// 位置情報を取得する
 		mLocationUtil = new LocationUtil();
 		// 日付を取得してファイルネームを決める
@@ -445,9 +483,15 @@ public class Camera2Fragment extends Fragment implements ActivityCompat.OnReques
 
 	@Override
 	public void onPause() {
+		super.onPause();
+	}
+
+	@Override
+	public void onDestroy(){
 		closeCamera();
 		stopBackgroundThread();
-		super.onPause();
+		mSound.release();
+		super.onDestroy();
 	}
 
 	@Override
@@ -840,9 +884,10 @@ public class Camera2Fragment extends Fragment implements ActivityCompat.OnReques
 											   @NonNull CaptureRequest request,
 											   @NonNull TotalCaptureResult result) {
 					if(modeFlag){
+						mSound.play(soundShutter, 0.8f, 0.8f, 0, 0, 1);
 						showToast("Saved capture image");
 					}
-					Log.d(TAG, mFile.toString());
+					Log.i(TAG, mFile.toString());
 					unlockFocus();
 				}
 			};
@@ -923,6 +968,8 @@ public class Camera2Fragment extends Fragment implements ActivityCompat.OnReques
 		private final Activity mActivity;
 		private final boolean mBol;
 
+		private SharedPreferencesUtil util;
+
 		ImageSaver(Image image, File file, Date date, Location location, Context context, Activity activity, boolean bol) {
 			mImage = image;
 			mFile = file;
@@ -931,6 +978,8 @@ public class Camera2Fragment extends Fragment implements ActivityCompat.OnReques
 			mContext = context;
 			mActivity = activity;
 			mBol = bol;
+
+			util = new SharedPreferencesUtil(context);
 		}
 
 		@Override
@@ -955,21 +1004,20 @@ public class Camera2Fragment extends Fragment implements ActivityCompat.OnReques
 				}
 			}
 
-			if(mBol){
+			if (mBol) {
 				// ファイルに位置情報と時間のデータをつける
 				ExifUtil.addExif(mDate, mLocation, mFile);
 
 				update(mFile);
-			}
-			else {
+			} else {
 				ReadQRCodeCamera2Dialog dialog = (ReadQRCodeCamera2Dialog) mActivity;
 				assert dialog != null;
 				dialog.onClicked();
 			}
 		}
 
-		private void update(final File file){
-			String URL = "http://" + getURL() + "/upload_photo/" + getUserId() + "/" + getUsername();
+		private void update(final File file) {
+			String URL = "http://" + util.getServerIP() + "/upload_photo/" + util.getUserId() + "/" + util.getUserName();
 
 			RequestQueue queue = Volley.newRequestQueue(mContext);
 
@@ -977,19 +1025,21 @@ public class Camera2Fragment extends Fragment implements ActivityCompat.OnReques
 					new Response.Listener<String>() {
 						@Override
 						public void onResponse(String response) {
-							Log.d("success", "capture bitmap upload");
+							Log.i("success", "capture bitmap upload");
 						}
 					},
 					new Response.ErrorListener() {
 						@Override
 						public void onErrorResponse(VolleyError error) {
-							error.printStackTrace();
+							Log.e("not success", "not capture bitmap upload", error);
 						}
 					}
 			) {
 				@Override
-				public String getBodyContentType() {
-					return "image/jpeg";
+				public Map<String, String> getHeaders() throws AuthFailureError {
+					Map<String, String> params = new HashMap<String, String>();
+					params.put("Content-Type", "image/jpeg");
+					return params;
 				}
 
 				@Override
@@ -1001,7 +1051,7 @@ public class Camera2Fragment extends Fragment implements ActivityCompat.OnReques
 						FileInputStream input = new FileInputStream(file);
 						ByteArrayOutputStream output = new ByteArrayOutputStream();
 
-						while(input.read(buffer) > 0){
+						while (input.read(buffer) > 0) {
 							output.write(buffer);
 						}
 
@@ -1018,54 +1068,6 @@ public class Camera2Fragment extends Fragment implements ActivityCompat.OnReques
 			};
 
 			queue.add(mRequest);
-		}
-
-		private String getURL(){
-			try {
-				FileInputStream input = mContext.openFileInput("path");
-
-				byte[] buffer = new byte[128];
-				input.read(buffer);
-
-				String str = new String(buffer);
-				return str.trim();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-
-			return "192.168.11.16:5001";
-		}
-
-		private String getUserId(){
-			try {
-				FileInputStream input = mContext.openFileInput("user_id");
-
-				byte[] buffer = new byte[128];
-				input.read(buffer);
-
-				String str = new String(buffer);
-				return str.trim();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-
-			return null;
-		}
-
-		private String getUsername(){
-			try {
-				FileInputStream input = mContext.openFileInput("user_name");
-
-				byte[] buffer = new byte[128];
-				input.read(buffer);
-
-				String str = new String(buffer);
-				return str.trim();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-
-			return null;
 		}
 	}
 

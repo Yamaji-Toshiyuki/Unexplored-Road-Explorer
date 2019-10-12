@@ -27,7 +27,8 @@ public class VolleyToServerUtil {
 	 * 名前を登録する
 	 * @param name 登録用の名前
 	 */
-	public void RegisterName(final String name){
+	public void RegisterName(String name){
+		final String mName = name;
 		// サーバーのアドレス
 		String GET_URL = "http://" + util.getServerIP() + "/register/" + name;
 		// リクエストキュー
@@ -44,11 +45,12 @@ public class VolleyToServerUtil {
 						try {
 							if("success".equals(response.getString("status"))){
 								// ユーザー名とユーザーIDを登録する
-								util.setUserName(name);
+								util.setUserName(mName);
 								util.setUserId(response.getString("id"));
 							}
 							else{
-								Log.e("err", "status failure");
+								String err = response.getString("message");
+								Log.e("err", "status failure : " + err);
 							}
 						} catch (JSONException e) {
 							e.printStackTrace();

@@ -62,6 +62,12 @@ public class StartActivity extends AppCompatActivity implements OpenDialog {
 	private boolean isEntry = false;
 
 	@Override
+	public void showDialog(DialogFragment dialog) {
+		InterfaceHolder.set(this);
+		dialog.show(getSupportFragmentManager(), "tag");
+	}
+
+	@Override
 	protected void onCreate(Bundle saveInstanceState){
 		super.onCreate(saveInstanceState);
 
@@ -107,7 +113,7 @@ public class StartActivity extends AppCompatActivity implements OpenDialog {
 		@Override
 		@NonNull
 		public Dialog onCreateDialog(Bundle saveInstanceState){
-			CharSequence[] items = {"デモンストレーション", "サーバーURLを変更", "ユーザー名を変更", "ユーザー情報", "閉じる"};
+			CharSequence[] items = {"デモンストレーション", "サーバーURLを変更", "ユーザー名を変更", "閉じる"};
 
 			Activity activity = getActivity();
 
@@ -116,25 +122,23 @@ public class StartActivity extends AppCompatActivity implements OpenDialog {
 			builder.setItems(items, new DialogInterface.OnClickListener() {
 				@Override
 				public void onClick(DialogInterface dialog, int which) {
+//					InterfaceHolder.set(this);
 					switch (which){
 						case 0:
-							Log.d("dialogFragment", "click demo");
+							Log.i("dialogFragment", "click demo");
 							InterfaceHolder.get().showDialog(new DemoDialogFragment());
 							dismiss();
 							break;
 						case 1:
-							Log.d("dialogFragment", "click change url");
+							Log.i("dialogFragment", "click change url");
 							InterfaceHolder.get().showDialog(new ChangeIPDialogFragment());
 							break;
 						case 2:
-							Log.d("dialogFragment", "click change user");
+							Log.i("dialogFragment", "click change user");
 							InterfaceHolder.get().showDialog(new ChangeUserDialogFragment());
 							break;
 						case 3:
-							Log.d("dialogFragment", "click information user");
-							break;
-						case 4:
-							Log.d("dialogFragment", "click cancel");
+							Log.i("dialogFragment", "click cancel");
 							break;
 					}
 				}
@@ -164,7 +168,10 @@ public class StartActivity extends AppCompatActivity implements OpenDialog {
 					})
 					.setNegativeButton("いいえ", null);
 
-			return builder.create();
+			Dialog dialog = builder.create();
+			dialog.setCanceledOnTouchOutside(false);
+
+			return dialog;
 		}
 	}
 
@@ -192,7 +199,10 @@ public class StartActivity extends AppCompatActivity implements OpenDialog {
 					})
 					.setNegativeButton("Cancel", null);
 
-			return builder.create();
+			Dialog dialog = builder.create();
+			dialog.setCanceledOnTouchOutside(false);
+
+			return dialog;
 		}
 	}
 
@@ -211,7 +221,7 @@ public class StartActivity extends AppCompatActivity implements OpenDialog {
 			editText.setText(util.getServerIP());
 			// ユーザー名を保存する
 			// サーバーのURLを決める
-			AlertDialog dialog = builder.setTitle("IPを入力してください")
+			builder.setTitle("IPを入力してください")
 					.setView(editText)
 					.setPositiveButton("OK", new DialogInterface.OnClickListener() {
 						@Override
@@ -222,8 +232,9 @@ public class StartActivity extends AppCompatActivity implements OpenDialog {
 							ViewGroup viewGroup = (ViewGroup) editText.getParent();
 							viewGroup.removeView(editText);
 						}
-					})
-					.create();
+					});
+
+			Dialog dialog = builder.create();
 			dialog.setCanceledOnTouchOutside(false);
 
 			return dialog;
@@ -238,14 +249,18 @@ public class StartActivity extends AppCompatActivity implements OpenDialog {
 		// ユーザー名を取得して表示する
 		String name = util.getUserName();
 		String id = util.getUserId();
+		Log.i("register", name + " / " + id);
 
 		if(name == null || id == null){
+            Log.i("register", "name or id is null");
 			// ユーザー名のファイルがなかったらダイアログを表示する
+			InterfaceHolder.set(this);
 			InterfaceHolder.get().showDialog(new ChangeUserDialogFragment());
 			text3.setText(null);
 			return false;
 		}
 		else{
+            Log.i("register", "success");
 			idCheckVolley(name, id);
 		}
 		user = findViewById(R.id.user_id);
@@ -303,13 +318,15 @@ public class StartActivity extends AppCompatActivity implements OpenDialog {
 	public boolean onTouchEvent(MotionEvent event){
 		// 画面から指が離されたら画面を遷移
 		if(event.getAction() == MotionEvent.ACTION_UP) {
-			if(!isEntry){
+			isEntry = checkEntry();
+			if(isEntry){
 				Intent intent = new Intent(this, MainActivity.class);
 				startActivityForResult(intent, REQUEST_CODE_ACTIVITY);
 				release();
 			}
 			else {
 				// ユーザー登録が済んでいないならダイアログを表示
+				InterfaceHolder.set(this);
 				InterfaceHolder.get().showDialog(new ChangeUserDialogFragment());
 			}
 		}
@@ -353,11 +370,5 @@ public class StartActivity extends AppCompatActivity implements OpenDialog {
 				finish();
 			}
 		}
-	}
-
-	@Override
-	public void showDialog(DialogFragment dialog) {
-		InterfaceHolder.set(this);
-		dialog.show(getSupportFragmentManager(), "tag");
 	}
 }

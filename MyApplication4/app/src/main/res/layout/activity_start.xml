@@ -67,16 +67,4 @@
         android:background="#0000"
         android:src="@drawable/option"/>
 
-    <ImageButton
-        android:id="@+id/ip_reset"
-        android:layout_width="50dp"
-        android:layout_height="50dp"
-        android:layout_alignParentTop="true"
-        android:layout_toStartOf="@+id/user_reset"
-        android:layout_margin="10dp"
-        android:padding="5dp"
-        android:scaleType="fitCenter"
-        android:background="#0000"
-        android:src="@drawable/option"/>
-
 </RelativeLayout>

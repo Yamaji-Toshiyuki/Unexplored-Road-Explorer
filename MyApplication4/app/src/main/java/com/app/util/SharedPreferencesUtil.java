@@ -62,7 +62,7 @@ public class SharedPreferencesUtil {
 
 	public void setUserId(String str){
 		data.edit()
-				.putString(Key.USER_NAME.name(), str)
+				.putString(Key.USER_ID.name(), str)
 				.apply();
 	}
 
