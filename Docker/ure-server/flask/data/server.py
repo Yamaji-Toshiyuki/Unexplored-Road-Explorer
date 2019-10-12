@@ -28,9 +28,14 @@ import os
 ALLOWED_EXTENSIONS = set(['png', 'jpg', 'gif'])
 
 app = Flask(__name__)
-app.config["JSON_AS_ASCII"] = False #日本語文字化け対策
-app.config["JSON_SORT_KEYS"] = False #ソートをそのまま
-app.config["UPOLOAD_FOLDER"] =  '~data/photos' #アップロード先ディレクトリ
+config = app.config
+config["JSON_AS_ASCII"] = False #日本語文字化け対策
+config["JSON_SORT_KEYS"] = False #ソートをそのまま
+config["UPOLOAD_FOLDER"] = '~/data/photos' #アップロード先ディレクトリ
+
+@app.route('/test')
+def test():
+    return str(config["UPLOAD_FOLDER"])
 
 def allwed_file(filename):
     # .があるかどうかのチェックと、拡張子の確認
