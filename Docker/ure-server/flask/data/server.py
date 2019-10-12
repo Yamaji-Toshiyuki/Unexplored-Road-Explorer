@@ -28,9 +28,9 @@ import os
 ALLOWED_EXTENSIONS = set(['png', 'jpg', 'gif'])
 
 app = Flask(__name__)
-app.config['JSON_AS_ASCII'] = False #日本語文字化け対策
+app.config["JSON_AS_ASCII"] = False #日本語文字化け対策
 app.config["JSON_SORT_KEYS"] = False #ソートをそのまま
-app.config['UPOLOAD_FOLDER'] =  './photos' #アップロード先ディレクトリ
+app.config["UPOLOAD_FOLDER"] =  '~data/photos' #アップロード先ディレクトリ
 
 def allwed_file(filename):
     # .があるかどうかのチェックと、拡張子の確認
@@ -232,7 +232,8 @@ def register(name):
         result = cursor.fetchall()
         sql = "INSERT INTO user_list VALUES( "+ str(result[0][0]) +", '" + str(name) + "')"
         cursor.execute(sql)
-        sql = "CREATE TABLE id_" + str(result[0][0]) + "_explored (osm_id bigint, ure_id int, way geometry(LineString, 3857), First_time date, latest_date date)"
+        #sql = "CREATE TABLE id_" + str(result[0][0]) + "_explored (osm_id bigint, ure_id int, way geometry(LineString, 3857), First_time date, latest_date date)"
+        sql = "CREATE TABLE id_0_explored (osm_id bigint, ure_id int, way geometry(LineString, 3857), First_time date, latest_date date)"
         cursor.execute(sql)
         connect.commit()
     except:
@@ -436,9 +437,10 @@ def upload_photo(user_id, user_name):
             'status':"Failure",
             'message':"Error Occured at connect to server / " + connect
         })
-    result = user_auth(cursor, user_id, user_name)
+    result = user_auth(user_id, user_name)
     if result == "Successful":
         if request.method == 'POST':
+            print(request.files)
             if 'file' not in request.files:
                 return "Error Occurred / file don't sended."
             file = request.files['file']
@@ -446,7 +448,7 @@ def upload_photo(user_id, user_name):
                 return "Error Occurred / file don't sended."
             if file and allwed_file(file.filename):
                 filename = secure_filename(file.filename)
-                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                file.save(os.path.join(app.config["UPLOAD_FOLDER"], filename))
         return "upload Successful"
     else:
         return "Error Occurred / authentication faild."
