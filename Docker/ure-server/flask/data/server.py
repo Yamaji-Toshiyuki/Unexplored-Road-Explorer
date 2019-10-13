@@ -19,19 +19,22 @@
 #---------------------------------------------------------------------------------------------#
 
 from flask import Flask, jsonify, request, send_from_directory
+from werkzeug.datastructures import ImmutableMultiDict
 from werkzeug.utils import secure_filename
+from PIL.ExifTags import TAGS
+from PIL import Image
 import psycopg2 as pg
 import datetime
 import math
 import os
 
-ALLOWED_EXTENSIONS = set(['png', 'jpg', 'gif'])
+ALLOWED_EXTENSIONS = set(['png', 'jpg', 'gif', 'bmp'])
 
 app = Flask(__name__)
 config = app.config
 config["JSON_AS_ASCII"] = False #日本語文字化け対策
 config["JSON_SORT_KEYS"] = False #ソートをそのまま
-config["UPOLOAD_FOLDER"] = '~/data/photos' #アップロード先ディレクトリ
+config["UPLOAD_FOLDER"] = '/home/photos' #アップロード先ディレクトリ
 
 @app.route('/test')
 def test():
@@ -227,6 +230,7 @@ def register(name):
         connect = getConnect("ure", "ure_data", "procon30")
         cursor = connect.cursor()
     except:
+        print("Error Occured at connect to server / " + connect)
         return jsonify({
             'status':"Failure",
             'message':"Error Occured at connect to server / " + connect
@@ -237,11 +241,14 @@ def register(name):
         result = cursor.fetchall()
         sql = "INSERT INTO user_list VALUES( "+ str(result[0][0]) +", '" + str(name) + "')"
         cursor.execute(sql)
-        #sql = "CREATE TABLE id_" + str(result[0][0]) + "_explored (osm_id bigint, ure_id int, way geometry(LineString, 3857), First_time date, latest_date date)"
-        sql = "CREATE TABLE id_0_explored (osm_id bigint, ure_id int, way geometry(LineString, 3857), First_time date, latest_date date)"
+        sql = "CREATE TABLE id_" + str(result[0][0]) + "_explored (osm_id bigint, ure_id int, way geometry(LineString, 3857), First_time date, latest_date date)"
+        # sql = "CREATE TABLE id_0_explored (osm_id bigint, ure_id int, way geometry(LineString, 3857), First_time date, latest_date date)"
         cursor.execute(sql)
         connect.commit()
     except:
+        cursor.close()
+        connect.close()
+        print("Error Occurred at execute sql / " + sql)
         return jsonify({
             'status':"failure",
             'message':"Error Occurred at execute sql / " + sql
@@ -435,7 +442,7 @@ def logging(user_id, user_name, now_location):
 @app.route('/upload_photo/<user_id>/<user_name>', methods=['GET', 'POST'])
 def upload_photo(user_id, user_name):
     try:
-        connect = getConnect("ure", "ure_data", "procon30")
+        connect = getConnect("postgres", "ure_data", "postgres")
         cursor = connect.cursor()
     except:
         return jsonify({
@@ -445,17 +452,38 @@ def upload_photo(user_id, user_name):
     result = user_auth(user_id, user_name)
     if result == "Successful":
         if request.method == 'POST':
-            print(request.files)
             if 'file' not in request.files:
+                print("Error Occurred / file don't sended.")
                 return "Error Occurred / file don't sended."
             file = request.files['file']
             if file.filename == '':
+                print("Error Occurred / file don't sended.")
                 return "Error Occurred / file don't sended."
             if file and allwed_file(file.filename):
                 filename = secure_filename(file.filename)
                 file.save(os.path.join(app.config["UPLOAD_FOLDER"], filename))
+            print(os.path.join(app.config["UPLOAD_FOLDER"] + "/" + filename))
+            sql = "SELECT count(*) FROM photo_list"
+            cursor.execute(sql)
+            elements = cursor.fetchall()[0][0]
+            img = Image.open(os.path.join(app.config["UPLOAD_FOLDER"] + "/" + filename))
+            exif = img._getexif()
+            exif_table = {}
+            for tag_id, value in exif.items():
+                tag = TAGS.get(tag_id, tag_id)
+                exif_table[tag] = value
+            shot_date = exif_table["DateTimeOriginal"]
+            shot_location = "'POINT(" + str(exif_table["GPSInfo"][4][0][0]) + "." + str(exif_table["GPSInfo"][4][2][0]) + " " + str(exif_table["GPSInfo"][2][0][0]) + "." + str(exif_table["GPSInfo"][2][2][0]) + ")'"
+            sql = "INSERT INTO photo_list VALUES(" + str(elements) + ", " + str(user_id) + ", to_date('" + str(shot_date) + "', 'YYYY:MM:DD HH24:MI:SS'), ST_Transform(ST_GeomFromText(" + str(shot_location) + ", 4326),3857), '" + str(os.path.join(app.config["UPLOAD_FOLDER"] + "/" + filename)) + "')"
+            print(sql)
+            cursor.execute(sql)
+            connect.commit()
+            cursor.close()
+            connect.close()
         return "upload Successful"
     else:
+        cursor.close()
+        connect.close()
         return "Error Occurred / authentication faild."
 
 @app.route('/do_sql/<db>/<sql>')
