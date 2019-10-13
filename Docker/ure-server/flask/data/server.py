@@ -28,7 +28,7 @@ import datetime
 import math
 import os
 
-ALLOWED_EXTENSIONS = set(['png', 'jpg', 'gif'])
+ALLOWED_EXTENSIONS = set(['png', 'jpg', 'gif', 'bmp'])
 
 app = Flask(__name__)
 config = app.config
@@ -473,7 +473,7 @@ def upload_photo(user_id, user_name):
                 tag = TAGS.get(tag_id, tag_id)
                 exif_table[tag] = value
             shot_date = exif_table["DateTimeOriginal"]
-            shot_location = "POINT'(" + str(exif_table["GPSInfo"][4][0][0]) + "." + str(exif_table["GPSInfo"][4][2][0]) + " " + str(exif_table["GPSInfo"][2][0][0]) + "." + str(exif_table["GPSInfo"][2][2][0]) + ")'"
+            shot_location = "'POINT(" + str(exif_table["GPSInfo"][4][0][0]) + "." + str(exif_table["GPSInfo"][4][2][0]) + " " + str(exif_table["GPSInfo"][2][0][0]) + "." + str(exif_table["GPSInfo"][2][2][0]) + ")'"
             sql = "INSERT INTO photo_list VALUES(" + str(elements) + ", " + str(user_id) + ", to_date('" + str(shot_date) + "', 'YYYY:MM:DD HH24:MI:SS'), ST_Transform(ST_GeomFromText(" + str(shot_location) + ", 4326),3857), '" + str(os.path.join(app.config["UPLOAD_FOLDER"] + "/" + filename)) + "')"
             print(sql)
             cursor.execute(sql)
