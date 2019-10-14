@@ -85,8 +85,5 @@ def makedata():
             cursor_ure.execute(sql)
     connect_ure.commit()
 
-@app.route('/1')
-def 
-
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

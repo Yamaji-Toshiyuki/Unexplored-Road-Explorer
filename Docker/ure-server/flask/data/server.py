@@ -24,7 +24,6 @@ from werkzeug.utils import secure_filename
 from PIL.ExifTags import TAGS
 from PIL import Image
 import psycopg2 as pg
-import routing
 import datetime
 import math
 import os
