@@ -40,10 +40,6 @@ import com.app.util.VolleyToServerUtil;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.util.Objects;
 
 public class StartActivity extends AppCompatActivity implements OpenDialog {
@@ -191,7 +187,7 @@ public class StartActivity extends AppCompatActivity implements OpenDialog {
 						public void onClick(DialogInterface dialog, int which) {
 							// サーバーにユーザー名を送る
 							VolleyToServerUtil volley = new VolleyToServerUtil(getContext());
-							volley.RegisterName(String.valueOf(editText.getText()));
+							volley.userAuth(String.valueOf(editText.getText()));
 
 							ViewGroup viewGroup = (ViewGroup) editText.getParent();
 							viewGroup.removeView(editText);

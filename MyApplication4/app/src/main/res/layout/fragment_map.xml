@@ -25,17 +25,18 @@
         android:layout_margin="10dp"
         android:padding="5dp"
         android:layout_alignParentEnd="true"
+        android:visibility="invisible"
         android:background="#0000"
         android:scaleType="fitCenter"
         android:src="@drawable/camera"/>
-    <!--android:visibility="invisible"-->
 
     <LinearLayout
-        android:id="@+id/layout"
+        android:id="@+id/debug_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:layout_margin="10dp">
+        android:layout_margin="10dp"
+        android:visibility="invisible">
 
         <Space
             android:layout_width="0dp"

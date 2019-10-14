@@ -101,6 +101,7 @@ public class Camera2Fragment extends Fragment implements ActivityCompat.OnReques
 
 	private SoundPool mSound;
 	private int soundShutter;
+	private SharedPreferencesUtil util;
 
 	/**
 	 * Conversion from screen rotation to JPEG orientation.
@@ -199,11 +200,6 @@ public class Camera2Fragment extends Fragment implements ActivityCompat.OnReques
 	 * This is the output file for our picture.
 	 */
 	private File mFile;
-
-	/**
-	 * This is where the photo was taken.
-	 */
-	private LocationUtil mLocationUtil;
 
 	/**
 	 * This is tha date that tha photo was taken.
@@ -430,7 +426,7 @@ public class Camera2Fragment extends Fragment implements ActivityCompat.OnReques
 		soundShutter = mSound.load(descriptor, 1);
 
 		// 位置情報を取得する
-		mLocationUtil = new LocationUtil();
+		util = new SharedPreferencesUtil(activity);
 		// 日付を取得してファイルネームを決める
 		mDate = new Date();
 		String filename = null;
@@ -535,7 +531,7 @@ public class Camera2Fragment extends Fragment implements ActivityCompat.OnReques
 					@Override
 					public void onImageAvailable(ImageReader reader) {
 						Image image = reader.acquireNextImage();
-						mBackgroundHandler.post(new ImageSaver(image, mFile, mDate, mLocationUtil.getLocation(), getContext(), getActivity(), modeFlag));
+						mBackgroundHandler.post(new ImageSaver(image, mFile, mDate, util.getLatLon(), getContext(), getActivity(), modeFlag));
 					}
 
 				}, mBackgroundHandler);
@@ -1038,7 +1034,7 @@ public class Camera2Fragment extends Fragment implements ActivityCompat.OnReques
 				@Override
 				public Map<String, String> getHeaders() throws AuthFailureError {
 					Map<String, String> params = new HashMap<String, String>();
-					params.put("Content-Type", "image/jpeg");
+					params.put("Content-Type", "image/bmp");
 					return params;
 				}
 

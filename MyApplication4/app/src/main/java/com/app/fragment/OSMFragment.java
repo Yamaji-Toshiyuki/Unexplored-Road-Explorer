@@ -9,6 +9,7 @@ import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.media.Image;
 import android.os.Bundle;
+import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.util.Log;
 import android.util.SparseArray;
@@ -18,6 +19,7 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import com.android.volley.Request;
@@ -38,11 +40,13 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.osmdroid.config.Configuration;
+import org.osmdroid.events.MapEventsReceiver;
 import org.osmdroid.tileprovider.tilesource.XYTileSource;
 import org.osmdroid.views.MapView;
 import org.osmdroid.util.GeoPoint;
 import org.osmdroid.api.IMapController;
 import org.osmdroid.views.overlay.CopyrightOverlay;
+import org.osmdroid.views.overlay.MapEventsOverlay;
 import org.osmdroid.views.overlay.Marker;
 import org.osmdroid.views.overlay.Polyline;
 import org.osmdroid.views.overlay.compass.CompassOverlay;
@@ -75,6 +79,10 @@ public class OSMFragment extends Fragment {
 	private Button mButtonSearch;
 	private EditText mEdit;
 	private ImageButton qrReadButton;
+	private LinearLayout layoutDebug;
+
+	private Handler mHandler;
+	private Runnable runnable;
 
 	private List<Polyline> polyLines = new ArrayList<>();
 	private Polyline rangeLine;
@@ -101,6 +109,7 @@ public class OSMFragment extends Fragment {
 		mButtonSearch = v.findViewById(R.id.button_search);
 		mEdit = v.findViewById(R.id.edit_search);
 		qrReadButton = v.findViewById(R.id.qr_button);
+		layoutDebug = v.findViewById(R.id.debug_layout);
 
 		mMapView = v.findViewById(R.id.mapview);
 		mMapView.setDestroyMode(false);
@@ -114,7 +123,21 @@ public class OSMFragment extends Fragment {
 
 		util = new SharedPreferencesUtil(getContext());
 
-		Configuration.getInstance().load(getContext(), PreferenceManager.getDefaultSharedPreferences(getContext()));
+		// 別スレッドで動作させる
+		mHandler = new Handler();
+		runnable = new Runnable() {
+			@Override
+			public void run() {
+				// マップの更新
+//				searchRoadVolley();
+
+				// delayを10秒挟む
+				mHandler.postDelayed(this, 10000);
+			}
+		};
+		mHandler.post(runnable);
+
+//		Configuration.getInstance().load(getContext(), PreferenceManager.getDefaultSharedPreferences(getContext()));
 
 		// ネットからタイルソースをとってこない
 		mMapView.setUseDataConnection(false);
@@ -126,14 +149,13 @@ public class OSMFragment extends Fragment {
 
 		// 現在地を表示
 		myLocationOverlay = new LocationNewOverlayUtil(new GpsMyLocationProvider(Objects.requireNonNull(getContext())), mMapView);
-		//
-		// TODO ここで疑似ロケーションを渡す
-		//
 
+		// TODO ここで疑似ロケーションを渡す
 		Location location = new Location("?");
 		location.setLatitude(MAP_LAT);
 		location.setLongitude(MAP_LON);
-		myLocationOverlay.setMyLocation(location, true);
+		util.setLatLon(SharedPreferencesUtil.MAP_LAT, SharedPreferencesUtil.MAP_LON);
+		myLocationOverlay.setMyLocation(getContext(), true);
 
 		myLocationOverlay.enableMyLocation();		// 現在地にマーカーを表示する
 		myLocationOverlay.enableFollowLocation();	// 現在地に画面をスナップする
@@ -193,31 +215,33 @@ public class OSMFragment extends Fragment {
 		mMarker.setIcon(image);
 
 		// シングルタップのイベントを設定する
-		/*MapEventsReceiver mEventsReceiver = new MapEventsReceiver() {
+		MapEventsReceiver mEventsReceiver = new MapEventsReceiver() {
 			@Override
 			public boolean singleTapConfirmedHelper(GeoPoint p) {
-				*//*mMapView.getOverlays().remove(mMarker);
+				/*mMapView.getOverlays().remove(mMarker);
 				mMarker.setPosition(p);
 				mMapView.getOverlays().add(mMarker);
 				mMapView.invalidate();
-				array.add(p);
-				return true;*//*
-				return false;
+				array.add(p);*/
+
+				searchRoadVolley();
+				return true;
+//				return false;
 			}
 
 			@Override
 			public boolean longPressHelper(GeoPoint p) {
-				*//*for(GeoPoint geo:array){
+				/*for(GeoPoint geo:array){
 					polyline.addPoint(geo);
 				}
 				mMapView.getOverlays().add(polyline);
-				array.clear();*//*
+				array.clear();*/
 
 				return false;
 			}
 		};
 		MapEventsOverlay mEventsOverlay = new MapEventsOverlay(mEventsReceiver);
-		mMapView.getOverlays().add(mEventsOverlay);*/
+		mMapView.getOverlays().add(mEventsOverlay);
 
 		mButtonSearch.setOnClickListener(new View.OnClickListener() {
 			@Override
@@ -225,9 +249,11 @@ public class OSMFragment extends Fragment {
 				searchRoadVolley();
 			}
 		});
-		mButtonSearch.setVisibility(View.VISIBLE);
 
-		mEdit.setVisibility(View.VISIBLE);
+		if(util.getIsDemo()){
+//			layoutDebug.setVisibility(View.VISIBLE);
+			qrReadButton.setVisibility(View.VISIBLE);
+		}
 
 		qrReadButton.setOnClickListener(new View.OnClickListener() {
 			@Override
@@ -273,6 +299,12 @@ public class OSMFragment extends Fragment {
 		}
 	}
 
+	@Override
+	public void onDestroy(){
+		mHandler.removeCallbacks(runnable);
+		super.onDestroy();
+	}
+
 	private BarcodeDetector detector;
 
 	@Override
@@ -307,7 +339,36 @@ public class OSMFragment extends Fragment {
 					SparseArray<Barcode> barcodes = detector.detect(frame);
 					if(barcodes.size() > 0){
 						Barcode thisCode = barcodes.valueAt(0);
-						Toast.makeText(getContext(), thisCode.rawValue, Toast.LENGTH_LONG).show();
+//						Toast.makeText(getContext(), thisCode.rawValue, Toast.LENGTH_LONG).show();
+
+						String str = thisCode.rawValue;
+						switch (Integer.parseInt(str)){
+							case 1:
+								if(util.getCurrentNumber() == null){
+									// server
+								}
+								break;
+							case 2:
+								if("1".equals(util.getCurrentNumber())){
+								}
+								break;
+							case 3:
+								if("2".equals(util.getCurrentNumber())){
+								}
+								break;
+							case 4:
+								if("3".equals(util.getCurrentNumber())){
+								}
+								break;
+							case 5:
+								if("4".equals(util.getCurrentNumber())){
+								}
+								break;
+							case 6:
+								if("5".equals(util.getCurrentNumber())){
+								}
+								break;
+						}
 						Log.w("qrcode", thisCode.rawValue);
 					}
 				} else {
@@ -336,7 +397,51 @@ public class OSMFragment extends Fragment {
 			zoom = "1";
 		}
 		// サーバーのアドレス
-		String URL = "http://" + util.getServerIP() + "/search_road/" + util.getUserId() + "/" + util.getUserName() + "/" + zoom + "/" + geo.getLongitude() + "," + geo.getLatitude();
+		String URL = "http://" + util.getServerIP() + util.getDemo()
+				+ "/search_road/" + util.getUserId() + "/" + util.getUserName()
+				+ "/" + 1000 + "/" + geo.getLongitude() + "," + geo.getLatitude();
+
+		// リクエストキュー
+		RequestQueue getQueue = Volley.newRequestQueue(Objects.requireNonNull(getContext()));
+		// リクエスト
+		JsonObjectRequest mRequest = new JsonObjectRequest(Request.Method.GET, URL,
+				// 通信成功
+				new Response.Listener<JSONObject>() {
+					@Override
+					public void onResponse(JSONObject response) {
+						// 道の線を引く
+						try {
+							if("Success".equals(response.getString("status"))){
+								Log.e("err", "error response server");
+							}
+							drawRange(response.getString("search_range"));
+							drawRoad(response.getJSONArray("result"));
+						} catch (JSONException e) {
+							e.printStackTrace();
+						}
+					}
+				},
+				// 通信失敗
+				new Response.ErrorListener() {
+					@Override
+					public void onErrorResponse(VolleyError error) {
+						Log.e("err", "error response volley", error);
+					}
+				});
+		getQueue.add(mRequest);
+	}
+
+	private void fakeLogging(GeoPoint geo){
+		if(geo == null){
+			// 位置情報を更新する
+			myLocationOverlay = new LocationNewOverlayUtil(new GpsMyLocationProvider(Objects.requireNonNull(getContext())), mMapView);
+			myLocationOverlay.enableMyLocation();		// 現在地にマーカーを表示する
+			mMapView.getOverlays().add(myLocationOverlay);
+			return;
+		}
+
+		// サーバーのアドレス
+		String URL = "http://" + util.getServerIP() + "/demo/search_road/" + util.getUserId() + "/" + util.getUserName() + "/" + 1000 + "/" + geo.getLongitude() + "," + geo.getLatitude();
 
 		// リクエストキュー
 		RequestQueue getQueue = Volley.newRequestQueue(Objects.requireNonNull(getContext()));
@@ -372,7 +477,7 @@ public class OSMFragment extends Fragment {
 		mMapView.getOverlays().remove(rangeLine);
 
 		rangeLine = new Polyline(mMapView);
-		rangeLine.setColor(0x7AADCC);
+//		rangeLine.setColor(0x7AADCC);
 		rangeLine.setOnClickListener(new Polyline.OnClickListener() {
 			@Override
 			public boolean onClick(Polyline polyline, MapView mapView, GeoPoint eventPos) {
@@ -410,7 +515,7 @@ public class OSMFragment extends Fragment {
 			try {
 				// 線の色を青に指定する
 				polyLines.add(i, new Polyline(mMapView));
-				polyLines.get(i).setColor(0x7AADCC);
+//				polyLines.get(i).setColor(0x7AADCC);
 				polyLines.get(i).setOnClickListener(new Polyline.OnClickListener() {
 					@Override
 					public boolean onClick(Polyline polyline, MapView mapView, GeoPoint eventPos) {

@@ -116,8 +116,8 @@ public class LocationService extends Service {
 		Response.ErrorListener errorListener = new Response.ErrorListener() {
 			@Override
 			public void onErrorResponse(VolleyError error) {
-				Log.e("err", "error response volley", error);
-				Toast.makeText(getApplicationContext(), "error response volley", Toast.LENGTH_LONG).show();
+				Log.e("err", "error response", error);
+				Toast.makeText(getApplicationContext(), "error response", Toast.LENGTH_LONG).show();
 			}
 		};
 
@@ -137,6 +137,9 @@ public class LocationService extends Service {
 			}
 			// 現在地を取得
 			Location location = locationResult.getLastLocation();
+
+			util.setLatLon(location.getLatitude(), location.getLongitude());
+
 			currentLocation = getBetterLocation(location, currentLocation);
 			sendLocationVolley(currentLocation);
 			Log.i("log", location.getLatitude() + "/" + location.getLongitude());

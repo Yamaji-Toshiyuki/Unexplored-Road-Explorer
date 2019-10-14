@@ -195,10 +195,12 @@ public class OptionActivity extends AppCompatActivity {
 		TextView title1 = findViewById(R.id.title1);
 		TextView title2 = findViewById(R.id.title2);
 		TextView title3 = findViewById(R.id.title3);
+		TextView title4 = findViewById(R.id.title4);
 
 		title1.setTextSize(titleFontSize);
 		title2.setTextSize(titleFontSize);
 		title3.setTextSize(titleFontSize);
+		title4.setTextSize(titleFontSize);
 
 		TextView body1 = findViewById(R.id.body1);
 		TextView body2 = findViewById(R.id.body2);

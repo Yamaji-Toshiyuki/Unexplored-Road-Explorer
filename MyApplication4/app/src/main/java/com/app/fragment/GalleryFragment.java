@@ -39,7 +39,7 @@ public class GalleryFragment extends Fragment {
 	private List<String> list = new ArrayList<>();
 	private LinearLayout viewContainer;
 
-	private ScrollView scrollView;
+//	private ScrollView scrollView;
 
 	static GalleryFragment newInstance(){
 		GalleryFragment fragment = new GalleryFragment();
@@ -52,9 +52,9 @@ public class GalleryFragment extends Fragment {
 
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle saveInstanceState){
-		View v = inflater.inflate(R.layout.fragment_gallery, container, false);
+		View v = inflater.inflate(R.layout.fragment_gallery, null);
 		viewContainer = v.findViewById(R.id.container);
-		scrollView = v.findViewById(R.id.scroll_view);
+//		scrollView = v.findViewById(R.id.scroll_view);
 
 		return v;
 	}
@@ -135,7 +135,7 @@ public class GalleryFragment extends Fragment {
 		}
 
 		container.addView(layout);
-		containerScroll();
+//		containerScroll();
 	}
 	@Override
 	public void onActivityResult(int requestCode, int resultCode, Intent data){
@@ -159,9 +159,9 @@ public class GalleryFragment extends Fragment {
 		}
 	}
 
-	private void containerScroll(){
+	/*private void containerScroll(){
 		scrollView.fullScroll(View.FOCUS_DOWN);
-	}
+	}*/
 
 	public void updateGallery(){
 		if(viewContainer == null){
