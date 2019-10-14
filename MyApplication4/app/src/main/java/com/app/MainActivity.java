@@ -38,7 +38,7 @@ public class MainActivity extends AppCompatActivity {
 	private final int REQUEST_CODE_CAMERA = 3000;
 	private final int REQUEST_CODE_OPTION = 3001;
 
-	private final static String TILE_FILE_NAME = "shikoku.zip";
+	private final static String TILE_FILE_NAME = "miyazaki.zip";
 
 	private SectionsPagerAdapter sectionsPagerAdapter;
 
@@ -60,7 +60,7 @@ public class MainActivity extends AppCompatActivity {
 		Intent intent = new Intent(this, LocationService.class);
 		intent.putExtra(VariableUtil.SERIAL_NAME, variable);
 		// 位置情報取得開始
-		//startService(intent);
+//		startService(intent);
 
 		// MapTileを用意する
 		setupTile();

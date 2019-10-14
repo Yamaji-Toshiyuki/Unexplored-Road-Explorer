@@ -129,10 +129,10 @@ public class OSMFragment extends Fragment {
 			@Override
 			public void run() {
 				// マップの更新
-//				searchRoadVolley();
+				searchRoadVolley();
 
 				// delayを10秒挟む
-				mHandler.postDelayed(this, 10000);
+				mHandler.postDelayed(this, 15000);
 			}
 		};
 		mHandler.post(runnable);
@@ -155,7 +155,7 @@ public class OSMFragment extends Fragment {
 		location.setLatitude(MAP_LAT);
 		location.setLongitude(MAP_LON);
 		util.setLatLon(SharedPreferencesUtil.MAP_LAT, SharedPreferencesUtil.MAP_LON);
-		myLocationOverlay.setMyLocation(getContext(), true);
+//		myLocationOverlay.setMyLocation(getContext(), true);
 
 		myLocationOverlay.enableMyLocation();		// 現在地にマーカーを表示する
 		myLocationOverlay.enableFollowLocation();	// 現在地に画面をスナップする
@@ -294,6 +294,7 @@ public class OSMFragment extends Fragment {
 	public void onResume() {
 		super.onResume();
 
+		mHandler.removeCallbacks(runnable);
 		if(mMapView != null){
 			mMapView.onResume();
 		}
