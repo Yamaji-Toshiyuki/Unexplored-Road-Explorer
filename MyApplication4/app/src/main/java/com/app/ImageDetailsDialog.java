@@ -1,5 +1,6 @@
 package com.app;
 
+import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
@@ -22,7 +23,7 @@ public class ImageDetailsDialog extends AppCompatActivity {
 
 		setContentView(R.layout.dialog_image_details);
 
-		String str = getIntent().getStringExtra("uri");
+		final String str = getIntent().getStringExtra("uri");
 		Uri uri = Uri.parse(str);
 
 		// 画像詳細
@@ -41,7 +42,10 @@ public class ImageDetailsDialog extends AppCompatActivity {
 		trash.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View v) {
-				// trash
+				Intent intent = new Intent();
+				intent.putExtra("uri", str);
+				setResult(RESULT_OK, intent);
+				finish();
 			}
 		});
 	}

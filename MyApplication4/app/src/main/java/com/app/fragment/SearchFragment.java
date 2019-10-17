@@ -18,6 +18,7 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 import com.app.R;
+import com.app.util.SharedPreferencesUtil;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -36,7 +37,9 @@ import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
@@ -119,15 +122,37 @@ public class SearchFragment extends Fragment {
 		Drawable image = getResources().getDrawable(R.drawable.marker, null);
 		mMarker.setIcon(image);
 
+		/*polyline = new Polyline();
+		polyline.setColor(0x807AADCC);
+		polyline.setOnClickListener(new Polyline.OnClickListener() {
+			@Override
+			public boolean onClick(Polyline polyline, MapView mapView, GeoPoint eventPos) {
+				return false;
+			}
+		});*/
+
 		// シングルタップのイベントを設定する
 		MapEventsReceiver mEventsReceiver = new MapEventsReceiver() {
 			@Override
 			public boolean singleTapConfirmedHelper(GeoPoint p) {
+				/*mMapView.getOverlays().remove(mMarker);
+				mMarker.setPosition(p);
+				mMapView.getOverlays().add(mMarker);
+				mMapView.invalidate();
+				array.add(p);
+				return true*/
 				return false;
 			}
 
 			@Override
 			public boolean longPressHelper(GeoPoint p) {
+				/*for(GeoPoint geo:array){
+					polyline.addPoint(geo);
+				}
+				mMapView.getOverlays().add(polyline);
+				mMapView.invalidate();
+				array.clear();*/
+
 				mMapView.getOverlays().remove(mMarker);
 				mMarker.setPosition(p);
 				mMapView.getOverlays().add(mMarker);
@@ -143,10 +168,13 @@ public class SearchFragment extends Fragment {
 			@Override
 			public void onClick(View v) {
 				// 調べる
-				searchVolley(mLocationOverlay.getMyLocation(), mMarker.getPosition());
+//				searchVolley(mLocationOverlay.getMyLocation(), mMarker.getPosition());
 			}
 		});
 	}
+
+	/*private List<GeoPoint> array = new ArrayList<>();
+	private Polyline polyline;*/
 
 	@Override
 	public void onPause(){
@@ -176,10 +204,11 @@ public class SearchFragment extends Fragment {
 	 * 現在地から目的地までの経路を検索する
 	 */
 	private void searchVolley(GeoPoint myLocation, GeoPoint destLocation){
+		SharedPreferencesUtil util = new SharedPreferencesUtil(Objects.requireNonNull(getContext()));
 		// サーバーのアドレス
-		String URL = "http://" + getURL() + "/search_" + myLocation + destLocation;
+		String URL = "http://" + util.getServerIP() + "/search_" + myLocation + destLocation;
 		// リクエストキュー
-		RequestQueue getQueue = Volley.newRequestQueue(Objects.requireNonNull(getContext()));
+		RequestQueue getQueue = Volley.newRequestQueue(getContext());
 		// リクエスト
 		JsonObjectRequest mRequest = new JsonObjectRequest(Request.Method.GET, URL,
 				// 通信成功
@@ -200,22 +229,6 @@ public class SearchFragment extends Fragment {
 		getQueue.add(mRequest);
 	}
 
-	private String getURL(){
-		try {
-			FileInputStream input = getContext().openFileInput("path");
-
-			byte[] buffer = new byte[128];
-			input.read(buffer);
-
-			String str = new String(buffer);
-			return str.trim();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-		return "192.168.11.16:5001";
-	}
-
 	/**
 	 * JSONObjectをパースしてマップに線を引く
 	 */
@@ -223,7 +236,7 @@ public class SearchFragment extends Fragment {
 		try {
 			// 線の色を青に指定する
 			Polyline polyline = new Polyline(mMapView);
-			polyline.setColor(0xFF00BFFF);
+			polyline.setColor(0x7AADCC);
 
 			// JSONObjectから道情報を取得する
 			String lines = object.getString("way");

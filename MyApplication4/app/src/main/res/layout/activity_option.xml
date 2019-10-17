@@ -178,7 +178,7 @@
                         android:background="#2555"
                         android:text="@string/title_stop_application"
                         android:textColor="#000"
-                        android:textSize="30sp" />
+                        android:textSize="20sp" />
 
                 </LinearLayout>
 
@@ -197,6 +197,51 @@
                         android:text="@string/button_stop_application"
                         android:textColor="#000"
                         android:textSize="25sp" />
+
+                </LinearLayout>
+
+            </TableRow>
+
+            <TableRow
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="10dp"
+                android:background="@drawable/shadow">
+
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_weight="2">
+
+                    <TextView
+                        android:id="@+id/title4"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_margin="10dp"
+                        android:padding="3dp"
+                        android:layout_gravity="center_vertical"
+                        android:background="#2555"
+                        android:text="@string/title_demo"
+                        android:textColor="#000"
+                        android:textSize="30sp" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_gravity="center_vertical"
+                    android:layout_weight="1">
+
+                    <Switch
+                        android:id="@+id/switch3"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_horizontal"
+                        android:checked="false"/>
 
                 </LinearLayout>
 

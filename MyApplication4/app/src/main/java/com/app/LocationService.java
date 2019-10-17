@@ -17,6 +17,7 @@ import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
+import com.app.util.SharedPreferencesUtil;
 import com.app.util.VariableUtil;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
@@ -33,12 +34,15 @@ public class LocationService extends Service {
 
 	private MyLocationCallBack mCallBack;
 
+	private SharedPreferencesUtil util;
+
 	@Override
 	public void onCreate(){
 		super.onCreate();
 
 		// LocationClient クラスのインスタンスを作成
 		mLocation = LocationServices.getFusedLocationProviderClient(this);
+		util = new SharedPreferencesUtil(this);
 
 		// 位置情報取得開始
 		startUpdateLocation();
@@ -85,8 +89,8 @@ public class LocationService extends Service {
 		mCallBack.switchLoggingVolley(true);
 
 		LocationRequest locationRequest = LocationRequest.create();
-		locationRequest.setInterval(20000);
-		locationRequest.setFastestInterval(10000);
+		locationRequest.setInterval(10000);
+		locationRequest.setFastestInterval(5000);
 		locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
 
 		mLocation.requestLocationUpdates(locationRequest, mCallBack, null);
@@ -118,8 +122,10 @@ public class LocationService extends Service {
 		};
 
 		// URLの断片
-		String SERVER_FLASK = "http://" + getURL();
-		String USER_STATE = getUserId() + "/" + getUsername();
+		String SERVER_FLASK = "http://" + util.getServerIP();
+		String USER_STATE = util.getUserId() + "/" + util.getUserName();
+
+		private Location currentLocation;
 
 		/**
 		 * 一定間隔ごとに呼ばれる
@@ -131,8 +137,9 @@ public class LocationService extends Service {
 			}
 			// 現在地を取得
 			Location location = locationResult.getLastLocation();
-			sendLocationVolley(location);
-			Log.d("log", location.getLatitude() + "/" + location.getLongitude());
+			currentLocation = getBetterLocation(location, currentLocation);
+			sendLocationVolley(currentLocation);
+			Log.i("log", location.getLatitude() + "/" + location.getLongitude());
 		}
 
 		/**
@@ -155,7 +162,7 @@ public class LocationService extends Service {
 					new Response.Listener<String>() {
 						@Override
 						public void onResponse(String response) {
-							Log.d("success", msg + " logging");
+							Log.i("success", msg + " logging");
 							Toast.makeText(getApplicationContext(), msg + " logging", Toast.LENGTH_LONG).show();
 						}
 					}, errorListener);
@@ -179,60 +186,67 @@ public class LocationService extends Service {
 
 			queue.add(request);
 		}
+	}
 
-		private String getURL(){
-			try {
-				FileInputStream input = getApplicationContext().openFileInput("path");
-
-				byte[] buffer = new byte[128];
-				if(input.read(buffer) == 0){
-					return "192.168.11.16:5001";
-				}
-
-				String str = new String(buffer);
-				return str.trim();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-
-			return "192.168.11.16:5001";
+	/**
+	 * Determines whether one Location reading is better than the current Location fix.
+	 * Code taken from * http://developer.android.com/guide/topics/location/obtaining-user-location.html
+	 *
+	 * 現在の位置情報と新しい位置情報を比較してより良い位置情報を返す。
+	 *
+	 * @param newLocation The new Location that you want to evaluate
+	 * @param currentBestLocation The current Location fix, to which you want to compare the new one
+	 * @return The better Location object based on recency and accuracy.
+	 */
+	protected Location getBetterLocation(Location newLocation, Location currentBestLocation) {
+		if (currentBestLocation == null) {
+			// A new location is always better than no location
+			return newLocation;
 		}
 
-		private String getUserId(){
-			try {
-				FileInputStream input = getApplicationContext().openFileInput("user_id");
+		// Check whether the new location fix is newer or older
+		long timeDelta = newLocation.getTime() - currentBestLocation.getTime();
+		int TWO_MINUTES = 120000;
+		boolean isSignificantlyNewer = timeDelta > TWO_MINUTES;
+		boolean isSignificantlyOlder = timeDelta < -TWO_MINUTES;
+		boolean isNewer = timeDelta > 0;
 
-				byte[] buffer = new byte[128];
-				if(input.read(buffer) == 0){
-					return null;
-				}
-
-				String str = new String(buffer);
-				return str.trim();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-
-			return null;
+		// If it's been more than two minutes since the current location, use the new location
+		// because the user has likely moved.
+		if (isSignificantlyNewer) {
+			return newLocation;
+			// If the new location is more than two minutes older, it must be worse
+		} else if (isSignificantlyOlder) {
+			return currentBestLocation;
 		}
 
-		private String getUsername(){
-			try {
-				FileInputStream input = getApplicationContext().openFileInput("user_name");
+		// Check whether the new location fix is more or less accurate
+		int accuracyDelta = (int) (newLocation.getAccuracy() - currentBestLocation.getAccuracy());
+		boolean isLessAccurate = accuracyDelta > 0;
+		boolean isMoreAccurate = accuracyDelta < 0;
+		boolean isSignificantlyLessAccurate = accuracyDelta > 200;
+		// Check if the old and new location are from the same provider
+		boolean isFromSameProvider = isSameProvider(newLocation.getProvider(), currentBestLocation.getProvider());
 
-				byte[] buffer = new byte[128];
-				if(input.read(buffer) == 0){
-					return null;
-				}
-
-				String str = new String(buffer);
-				return str.trim();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-
-			return null;
+		// Determine location quality using a combination of timeliness and accuracy
+		if (isMoreAccurate) {
+			return newLocation;
 		}
+		else if (isNewer && !isLessAccurate) {
+			return newLocation;
+		}
+		else if (isNewer && !isSignificantlyLessAccurate && isFromSameProvider) {
+			return newLocation;
+		}
+
+		return currentBestLocation;
+	}
+
+	public boolean isSameProvider(String newProvider, String currentProvider){
+		if(currentProvider == null){
+			return true;
+		}
+		return currentProvider.equals(newProvider);
 	}
 
 	@Nullable

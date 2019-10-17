@@ -14,6 +14,8 @@
     <string name="title_background">バックグラウンド</string>
     <string name="body_background">アプリケーションを終了しても、バックグラウンドで位置情報を取得する。</string>
     <string name="title_stop_application">アプリケーションを終了する</string>
+    <string name="title_demo">デモンストレーションモードに切り替える</string>
+    <string name="body_demo">デモンストレーション用のモード</string>
     <string name="button_stop_application">終了</string>
     <string name="hint_server_url">server url</string>
     <string name="button_server_start">初期化</string>

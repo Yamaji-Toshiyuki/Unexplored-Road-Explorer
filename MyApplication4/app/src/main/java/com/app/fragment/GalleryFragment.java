@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -63,14 +64,6 @@ public class GalleryFragment extends Fragment {
 		super.onActivityCreated(saveInstanceState);
 
 		addGalleryContents(viewContainer, Objects.requireNonNull(getContext()));
-
-		/*button.setOnClickListener(new View.OnClickListener() {
-			@Override
-			public void onClick(View v) {
-				viewContainer.removeAllViews();
-				viewContainer.addView(view);
-			}
-		});*/
 	}
 
 	@Override
@@ -109,7 +102,7 @@ public class GalleryFragment extends Fragment {
 
 			TextView date_text = new TextView(context);
 			date_text.setTextColor(0xFF000000);
-			date_text.setTextSize(60f);
+			date_text.setTextSize(getTextSize());
 			date_text.setBackgroundResource(R.drawable.shadow);
 
 			String date = filename.substring(11, 16);
@@ -134,7 +127,7 @@ public class GalleryFragment extends Fragment {
 				public void onClick(View v) {
 					Intent intent = new Intent(getContext(), ImageDetailsDialog.class);
 					intent.putExtra("uri", uri.toString());
-					startActivity(intent);
+					startActivityForResult(intent, 3003);
 				}
 			});
 
@@ -143,6 +136,27 @@ public class GalleryFragment extends Fragment {
 
 		container.addView(layout);
 		containerScroll();
+	}
+	@Override
+	public void onActivityResult(int requestCode, int resultCode, Intent data){
+		super.onActivityResult(requestCode, resultCode, data);
+		if(requestCode == 3003){
+			if(data != null){
+				Uri uri = Uri.parse(data.getStringExtra("uri"));
+				File file = new File(uri.getPath());
+				file.delete();
+				addGalleryContents(viewContainer, Objects.requireNonNull(getContext()));
+			}
+		}
+	}
+
+	private float getTextSize(){
+		if(Build.VERSION.SDK_INT <= 24){
+			return 30;
+		}
+		else {
+			return 50;
+		}
 	}
 
 	private void containerScroll(){

@@ -18,6 +18,7 @@ import android.widget.TextView;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.app.util.SharedPreferencesUtil;
 import com.app.util.VariableUtil;
 
 import java.io.FileInputStream;
@@ -36,6 +37,11 @@ public class OptionActivity extends AppCompatActivity {
 	private int debugCount;
 	private TableRow debugRow;
 
+	private boolean isDemo;
+	private boolean isDebug;
+
+	private SharedPreferencesUtil util;
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -47,6 +53,8 @@ public class OptionActivity extends AppCompatActivity {
 
 		intent = getIntent();
 		variableUtil = (VariableUtil) intent.getSerializableExtra(VariableUtil.SERIAL_NAME);
+
+		final SharedPreferencesUtil preferences = new SharedPreferencesUtil(this);
 
 		// トグルスイッチのインスタンス生成
 		Switch toggleSwitch = findViewById(R.id.switch2);
@@ -60,10 +68,23 @@ public class OptionActivity extends AppCompatActivity {
 				}
 				if(debugCount > 10){
 					debugRow.setVisibility(View.VISIBLE);
+					isDebug = true;
 				}
 			}
 		});
 
+		// デモンストレーション用
+		Switch demoSwitch = findViewById(R.id.switch3);
+		isDemo = preferences.getIsDemo();
+		demoSwitch.setChecked(isDemo);
+		demoSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+			@Override
+			public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+				isDemo = isChecked;
+			}
+		});
+
+		// buttonのスケールを決める
 		float scale = getResources().getDisplayMetrics().density;
 		int size;
 		if(Build.VERSION.SDK_INT <= 24){
@@ -74,14 +95,16 @@ public class OptionActivity extends AppCompatActivity {
 		}
 		RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(size, size);
 
-		intent = new Intent();
 		// 戻るボタンを押したら戻る
 		ImageButton back = findViewById(R.id.button_back);
 		back.setLayoutParams(params);
 		back.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View v) {
+				Intent intent = new Intent();
 				intent.putExtra("isLocationServer", variableUtil.getIsLocationService());
+				intent.putExtra("isDemo", isDemo);
+				intent.putExtra("isDebug", isDebug);
 				setResult(RESULT_OK, intent);
 				finish();
 			}
@@ -133,7 +156,7 @@ public class OptionActivity extends AppCompatActivity {
 		});
 
 		mURL = findViewById(R.id.edit_text);
-		mURL.setText(getURL());
+		mURL.setText(preferences.getServerIP());
 		mURL.setTextSize(fontSize);
 
 		Button editReloadButton = findViewById(R.id.button_edit_reload);
@@ -141,8 +164,8 @@ public class OptionActivity extends AppCompatActivity {
 		editReloadButton.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View v) {
-				setURL("192.168.11.16:5001");
-				mURL.setText(getURL());
+				preferences.setServerIP("192.168.11.16:5001");
+				mURL.setText(preferences.getServerIP());
 			}
 		});
 
@@ -151,8 +174,8 @@ public class OptionActivity extends AppCompatActivity {
 		editSetButton.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View v) {
-				setURL(mURL.getText().toString());
-				mURL.setText(getURL());
+				preferences.setServerIP(mURL.getText().toString());
+				mURL.setText(preferences.getServerIP());
 			}
 		});
 	}
@@ -184,33 +207,5 @@ public class OptionActivity extends AppCompatActivity {
 		body2.setTextSize(bodyFontSize);
 
 		return titleFontSize;
-	}
-
-	private String getURL(){
-		try {
-			FileInputStream input = openFileInput("path");
-
-			byte[] buffer = new byte[input.available()];
-			if(input.read(buffer) == 0){
-				return "192.168.11.16:5001";
-			}
-
-			String str = new String(buffer);
-			return str.trim();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-		return "192.168.11.16:5001";
-	}
-
-	public void setURL(String url){
-		try{
-			FileOutputStream output = openFileOutput("path", MODE_PRIVATE);
-			output.write(url.getBytes());
-			output.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
 	}
 }
