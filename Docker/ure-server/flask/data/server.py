@@ -112,17 +112,19 @@ def map_matching(linestring):
     for i in range(len(linestring)):
         print(str(len(linestring)) + " " + str(i))
         search_area = culc_metre(100, linestring[i].replace(" ", ","))
-        sql = "SELECT osm_id FROM planet_osm_line WHERE ST_Intersects(way, ST_Transform(ST_MakePolygon(ST_GeomFromText(" + make_square(search_area) + ", 4326)), 3857)) AND route != 'ferry' AND route != 'rail';"
+        sql = "SELECT osm_id FROM planet_osm_line WHERE ST_Intersects(way, ST_Transform(ST_MakePolygon(ST_GeomFromText(" + make_square(search_area) + ", 4326)), 3857));"
         cursor_osm.execute(sql)
         id_list = cursor_osm.fetchall()
         # print("id_lists = " + str(id_list))
         dist = 0
         index = 0
         for j in range(len(id_list)):
-            sql = "SELECT ST_Distance((SELECT way FROM planet_osm_line WHERE osm_id = " + str(id_list[j][0]) + "), ST_Transform(ST_GeomFromText('POINT(" + linestring[i] + ")', 4326), 3857));"
+            sql = "SELECT ST_Distance((SELECT way FROM planet_osm_line WHERE osm_id = " + str(id_list[j][0]) + " LIMIT 1), ST_Transform(ST_GeomFromText('POINT(" + linestring[i] + ")', 4326), 3857));"
             cursor_osm.execute(sql)
             temp = cursor_osm.fetchall()
-            if temp[0][0] < dist or j == 0:
+            temp = temp[0][0]
+            if temp < dist or j == 0:
+                print(temp)
                 dist = temp
                 index = j
         try:
@@ -137,7 +139,7 @@ def map_matching(linestring):
             break
     points = []
     for i in range(len(match_ids)):
-        sql = "SELECT ST_AsText(ST_Transform(ST_ClosestPoint((SELECT way FROM planet_osm_line WHERE osm_id = " + str(match_ids[i]) + "), ST_Transform(ST_GeomFromText('POINT(" + str(linestring[i]) + ")', 4326),3857)), 4326));"
+        sql = "SELECT ST_AsText(ST_Transform(ST_ClosestPoint((SELECT way FROM planet_osm_line WHERE osm_id = " + str(match_ids[i]) + " LIMIT 1), ST_Transform(ST_GeomFromText('POINT(" + str(linestring[i]) + ")', 4326),3857)), 4326));"
         cursor_osm.execute(sql)
         temp = cursor_osm.fetchall()
         points.append(str(i) + "/" + str(temp[0][0]))
@@ -157,7 +159,7 @@ def map_matching(linestring):
                 way += points[j][1].lstrip("POINT(").replace(")", ",")
             way = way.rstrip(",") + ")"
             result.append([match_ids[i], way])
-    print(str(result))
+    # print(str(result))
     cursor_osm.close()
     cursor_ure.close()
     connect_osm.close()
@@ -171,6 +173,50 @@ def index():
 @app.route('/favicon.ico')
 def favicon():
     return app.send_static_file("images/fav.ico")
+
+@app.route('/user_auth/<user_id>/<user_name>')
+def user_auth_alt(user_id, user_name):
+    try:
+        connect_osm = getConnect("ure", "osm_data", "procon30")
+        cursor_osm = connect_osm.cursor()
+        connect_ure = getConnect("ure", "ure_data", "procon30")
+        cursor_ure = connect_ure.cursor()
+    except:
+        return jsonify({
+            'status':"Failure",
+            'message':"Error Occured at connect to server"
+        })
+    sql = "SELECT user_name FROM user_list WHERE user_id=" + str(user_id)
+    try:
+        cursor_ure.execute(sql)
+        result = cursor_ure.fetchall()
+        if user_name != result[0][0]:
+            raise ValueError()
+    except ValueError:
+        cursor_osm.close()
+        cursor_ure.close()
+        connect_osm.close()
+        connect_ure.close()
+        return jsonify({
+            'status':"failure",
+            'message':"Error Occurred at Authentication / " + sql
+        })
+    except:
+        cursor_osm.close()
+        cursor_ure.close()
+        connect_osm.close()
+        connect_ure.close()
+        return jsonify({
+            'status':"failure",
+            'message':"Error Occurred at execute sql / " + sql
+        })
+    cursor_osm.close()
+    cursor_ure.close()
+    connect_osm.close()
+    connect_ure.close()
+    return jsonify({
+        'status':"success"
+    })
 
 @app.route('/register/<name>')
 def register(name):
@@ -198,7 +244,10 @@ def register(name):
         })
     cursor.close()
     connect.close()
-    return str(result[0][0])
+    return jsonify({
+        'status':"success",
+        'id':str(result[0][0])
+    })
     
 @app.route('/search_road/<user_id>/<user_name>/<radius>/<now_location>')
 def search_road(user_id, user_name, radius, now_location):
@@ -293,52 +342,74 @@ def search_road(user_id, user_name, radius, now_location):
 @app.route('/logging_switch/<user_id>/<user_name>/<state>')
 def logging_switch(user_id, user_name, state):
     try:
-        connect = getConnect("ure", "ure_data", "procon30")
-        cursor = connect.cursor()
+        connect_osm = getConnect("ure", "osm_data", "procon30")
+        cursor_osm = connect_osm.cursor()
+        connect_ure = getConnect("ure", "ure_data", "procon30")
+        cursor_ure = connect_ure.cursor()
     except:
         return jsonify({
             'status':"Failure",
-            'message':"Error Occured at connect to server / " + connect
+            'message':"Error Occured at connect to server"
         })
     auth_result = user_auth(user_id, user_name)
     if auth_result == "Successful":
         if state == "ON":
             try:
                 sql = "CREATE TABLE id_" + str(user_id) + "_log ( way geometry(Point, 3857))"
-                cursor.execute(sql)
+                cursor_ure.execute(sql)
             except:
-                cursor.close()
-                connect.close()
+                cursor_osm.close()
+                connect_osm.close()
+                cursor_ure.close()
+                connect_ure.close()
                 return jsonify({
                     'status':"failure",
                     'message':"Error Occurred at execute sql / " + sql
                 })
-            connect.commit()
-            cursor.close()
-            connect.close()
+            cursor_osm.close()
+            connect_osm.close()
+            connect_ure.commit()
+            cursor_ure.close()
+            connect_ure.close()
             return "logging ready."
         elif state == "OFF":
             print("Get \"logging finish\". Processing...")
             sql = "SELECT ST_Astext(ST_Transform(way, 4326)) FROM id_" + str(user_id) + "_log"
-            cursor.execute(sql)
-            result = cursor.fetchall()
+            cursor_ure.execute(sql)
+            result = cursor_ure.fetchall()
             log = "LINESTRING("
             for i in range(len(result)):
                 log += (str(result[i]).lstrip("('POINT()')").rstrip(")',)") + ",")
             log = log.rstrip(",") + ")"
-            print("log = " + log)
+            # print("log = " + log)
             expect_route = map_matching(log)
             for i in range(len(expect_route)):
+                sql = "SELECT ST_AsText(ST_Transform(way, 4326)) FROM planet_osm_line WHERE osm_id = " + str(expect_route[i][0])
+                cursor_osm.execute(sql)
+                roads = cursor_osm.fetchall()
+                print(expect_route[i][1].lstrip("LINESTRING(").rstrip(")").split(","))
+                exproads = []
+                print("Returned way : " + str(len(roads)))
+                for j in range(len(roads)):
+                    b_index = roads[j][0].find(expect_route[i][1].lstrip("LINESTRING(").rstrip(")").split(",")[0])
+                    e_index = roads[j][0].find(expect_route[i][1].lstrip("LINESTRING(").rstrip(")").split(",")[-1]) + len(expect_route[i][1].lstrip("LINESTRING(").rstrip(")").split(",")[-1]) + 1
+                    if b_index == -1 or e_index - len(expect_route[i][1].lstrip("LINESTRING(").rstrip(")").split(",")[-1]) - 1 == -1:
+                        continue
+                    temp = "LINESTRING(" + roads[j][0][b_index:e_index] + ")"
+                    print(str(b_index) + " / " + str(e_index) + " / " + str(temp))
+                    exproads.append([expect_route[i][0], temp])
                 sql = "SELECT COUNT(*) FROM id_" + str(user_id) + "_explored WHERE osm_id = " + str(expect_route[i][0])
-                cursor.execute(sql)
-                elements = cursor.fetchall()
+                cursor_ure.execute(sql)
+                elements = cursor_ure.fetchall()
                 sql = "INSERT INTO id_" + str(user_id) + "_explored VALUES(" + str(expect_route[i][0]) + "," + str(elements[0][0] + 1) + ", ST_Transform(ST_GeomFromText('" + str(expect_route[i][1]) + "', 4326), 3857),   null, to_date('" + str(datetime.date.today()) + "', 'YYYY-MM-DD'))"
-            cursor.execute(sql)
+                cursor_ure.execute(sql)
             sql = "DROP TABLE id_" + str(user_id) + "_log"
-            cursor.execute(sql)
-            connect.commit()
-            cursor.close()
-            connect.close()
+            # cursor.execute(sql)
+            cursor_osm.close()
+            connect_osm.close()
+            connect_ure.commit()
+            cursor_ure.close()
+            connect_ure.close()
             return jsonify({
                 'status':"success",
                 'message':"logging finished.",
@@ -389,7 +460,7 @@ def upload_photo(user_id, user_name):
             'status':"Failure",
             'message':"Error Occured at connect to server / " + connect
         })
-    result = user_auth(cursor, user_id, user_name)
+    result = user_auth(user_id, user_name)
     if result == "Successful":
         if request.method == 'POST':
             if 'file' not in request.files:
