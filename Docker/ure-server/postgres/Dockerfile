@@ -1,6 +1,6 @@
 FROM postgres:11.5
 
-MAINTAINER Toshiyuki_YAMAJI<nexus02221toshiyuki@gmail.com>
+# MAINTAINER Toshiyuki_YAMAJI<nexus02221toshiyuki@gmail.com>
 
 USER root
 RUN apt update -y && apt upgrade -y

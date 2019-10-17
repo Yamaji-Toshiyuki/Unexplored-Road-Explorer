@@ -120,7 +120,7 @@ def map_matching(linestring):
     for i in range(len(linestring)):
         print(str(len(linestring)) + " " + str(i))
         search_area = culc_metre(100, linestring[i].replace(" ", ","))
-        sql = "SELECT osm_id FROM planet_osm_line WHERE ST_Intersects(way, ST_Transform(ST_MakePolygon(ST_GeomFromText(" + make_square(search_area) + ", 4326)), 3857)) AND route != 'ferry' AND route != 'rail';"
+        sql = "SELECT osm_id FROM planet_osm_line WHERE ST_Intersects(way, ST_Transform(ST_MakePolygon(ST_GeomFromText(" + make_square(search_area) + ", 4326)), 3857))"
         cursor_osm.execute(sql)
         id_list = cursor_osm.fetchall()
         # print("id_lists = " + str(id_list))

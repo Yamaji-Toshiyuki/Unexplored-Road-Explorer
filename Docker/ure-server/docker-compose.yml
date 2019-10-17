@@ -12,9 +12,14 @@ services:
     volumes:
       - ./flask/data:/home
     ports:
-      - "5001:5000"
+      - "58888:8888"
+      - "55000:5000"
     networks:
       - ure-net
+    environment:
+      NB_UID: 1000
+      GRANT_SUDO: "yes"
+      # command: jupyter lab --NotebookApp.password='sha1:e10592e1c8fa:757ed12252c06a6348fd2f4715e877d19eb7ea30' --port 8888 --ip=0.0.0.0 --allow-root
 
   postgres:
     restart: always
@@ -29,7 +34,7 @@ services:
     volumes:
       - ./postgres/data:/home
     ports:
-      - '5431:5432'
+      - '55432:5432'
     networks:
       - ure-net
 
