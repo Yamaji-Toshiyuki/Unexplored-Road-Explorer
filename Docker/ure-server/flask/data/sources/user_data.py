@@ -9,11 +9,13 @@
 #
 # user_auth(user_id, user_name)
 # | ユーザー認証
-# | 引数: str;ユーザー名, int;ユーザーID
+# | 引数: int;ユーザーID, str;ユーザー名
 # | 返り値: str;"success" or "failure"
 # 
 # upload_photo(user_id, user_name)
-# | 
+# | 写真の投稿
+# | 引数: int;ユーザーID, str;ユーザー名
+# | 返り値: str;"success" or "failure"
 #---------------------------------------------------------------------------------------------#
 
 import psycopg2 as pg
